@@ -2,7 +2,7 @@ import type { Plugin } from "@opencode-ai/plugin";
 import { tool } from "@opencode-ai/plugin";
 import matter from "gray-matter";
 import os from "os";
-import { promises as fs } from "fs";
+import { promises as fs, Dirent } from "fs";
 import { basename, dirname, join, relative, sep } from "path";
 import { z } from "zod";
 import pkg from "../package.json";
@@ -29,7 +29,7 @@ const SkillFrontmatterSchema = z.object({
   description: z.string().min(20, "Description must be at least 20 characters for discoverability"),
   license: z.string().optional(),
   "allowed-tools": z.array(z.string()).optional(),
-  metadata: z.record(z.string()).optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 });
 
 type SkillFrontmatter = z.infer<typeof SkillFrontmatterSchema>;
@@ -42,21 +42,38 @@ function logError(message: string, ...args: unknown[]) {
   console.error(`[${pkg.name}] ${message}`, ...args);
 }
 
-function generateToolName(skillPath: string, baseDir: string): string {
-  const relativePath = relative(baseDir, skillPath);
+function generateToolName(skillPath: string, baseDir?: string): string {
+  if (typeof skillPath !== "string" || skillPath.length === 0) {
+    logWarning("Received invalid skill path while generating tool name; defaulting to skills_unknown.");
+    return "skills_unknown";
+  }
+
+  const safeBase = typeof baseDir === "string" && baseDir.length > 0 ? baseDir : dirname(skillPath);
+  const relativePath = relative(safeBase, skillPath);
   const dirPath = dirname(relativePath);
+
+  if (dirPath === "." || dirPath === "") {
+    const folder = basename(dirname(skillPath));
+    return `skills_${folder.replace(/-/g, "_")}`;
+  }
+
   const components = dirPath.split(sep).filter((part) => part !== ".");
   return `skills_${components.join("_").replace(/-/g, "_")}`;
 }
 
 function logFrontmatterErrors(skillPath: string, error: z.ZodError<SkillFrontmatter>) {
   logError(`Invalid frontmatter in ${skillPath}:`);
-  for (const issue of error.errors) {
+  for (const issue of error.issues) {
     logError(` - ${issue.path.join(".")}: ${issue.message}`);
   }
 }
 
 async function parseSkill(skillPath: string, baseDir: string): Promise<Skill | null> {
+  if (typeof skillPath !== "string" || skillPath.length === 0) {
+    logWarning("Skipping skill with invalid path:", skillPath);
+    return null;
+  }
+
   try {
     const raw = await fs.readFile(skillPath, "utf8");
     const { data, content } = matter(raw);
@@ -131,7 +148,7 @@ async function findSkillFiles(basePath: string): Promise<string[]> {
     for (const entry of entries) {
       const fullPath = join(current, entry.name);
 
-      let stat: fs.Dirent | Awaited<ReturnType<typeof fs.stat>>;
+      let stat: Dirent | Awaited<ReturnType<typeof fs.stat>>;
 
       if (entry.isSymbolicLink()) {
         try {
@@ -155,11 +172,29 @@ async function findSkillFiles(basePath: string): Promise<string[]> {
   return skillFiles;
 }
 
-async function discoverSkills(basePaths: string[]): Promise<Skill[]> {
+function normalizeBasePaths(basePaths: unknown): string[] {
+  if (Array.isArray(basePaths)) {
+    return basePaths.filter((p): p is string => typeof p === "string");
+  }
+
+  if (typeof basePaths === "string") {
+    return [basePaths];
+  }
+
+  logWarning("Invalid basePaths provided to discoverSkills; expected string[] or string.");
+  return [];
+}
+
+async function discoverSkills(basePaths: unknown): Promise<Skill[]> {
+  const paths = normalizeBasePaths(basePaths);
+  if (paths.length === 0) {
+    return [];
+  }
+
   const skills: Skill[] = [];
   let foundExistingDir = false;
 
-  for (const basePath of basePaths) {
+  for (const basePath of paths) {
     try {
       const matches = await findSkillFiles(basePath);
       foundExistingDir = true;
@@ -181,7 +216,7 @@ async function discoverSkills(basePaths: string[]): Promise<Skill[]> {
   if (!foundExistingDir) {
     logWarning(
       "No skills directories found. Checked:\n" +
-        basePaths.map((path) => `  - ${path}`).join("\n"),
+        paths.map((path) => `  - ${path}`).join("\n"),
     );
   }
 
@@ -203,50 +238,57 @@ async function discoverSkills(basePaths: string[]): Promise<Skill[]> {
 }
 
 export const SkillsPlugin: Plugin = async (input) => {
-  const xdgConfigHome = process.env.XDG_CONFIG_HOME;
-  const configSkillsPath = xdgConfigHome
-    ? join(xdgConfigHome, "opencode", "skills")
-    : join(os.homedir(), ".config", "opencode", "skills");
+  try {
+    const xdgConfigHome = process.env.XDG_CONFIG_HOME;
+    const configSkillsPath = xdgConfigHome
+      ? join(xdgConfigHome, "opencode", "skills")
+      : join(os.homedir(), ".config", "opencode", "skills");
 
-  const skills = await discoverSkills([
-    configSkillsPath,
-    join(os.homedir(), ".opencode", "skills"),
-    join(input.directory, ".opencode", "skills"),
-  ]);
+    const skills = await discoverSkills([
+      configSkillsPath,
+      join(os.homedir(), ".opencode", "skills"),
+      join(input.directory, ".opencode", "skills"),
+    ]);
 
-  if (skills.length === 0) {
+    if (skills.length === 0) {
+      return {};
+    }
+
+    const tools: Record<string, ReturnType<typeof tool>> = {};
+
+    for (const skill of skills) {
+      if (!skill.toolName) continue;
+
+      tools[skill.toolName] = tool({
+        description: skill.description,
+        args: {},
+        async execute(_, toolCtx) {
+          const sendSilentPrompt = async (text: string) => {
+            if (!input.client?.session?.prompt) return;
+
+            await input.client.session.prompt({
+              path: { id: toolCtx.sessionID },
+              body: {
+                agent: toolCtx.agent,
+                noReply: true,
+                parts: [{ type: "text", text }],
+              },
+            });
+          };
+
+          await sendSilentPrompt(`The "${skill.name}" skill is loading\n${skill.name}`);
+          await sendSilentPrompt(`Base directory for this skill: ${skill.directory}\n\n${skill.content}`);
+
+          return `Launching skill: ${skill.name}`;
+        },
+      });
+    }
+
+    return { tool: tools };
+  } catch (error) {
+    logError("Failed to initialize skills plugin:", error);
     return {};
   }
-
-  const tools: Record<string, ReturnType<typeof tool>> = {};
-
-  for (const skill of skills) {
-    tools[skill.toolName] = tool({
-      description: skill.description,
-      args: {},
-      async execute(_, toolCtx) {
-        const sendSilentPrompt = async (text: string) => {
-          if (!input.client?.session?.prompt) return;
-
-          await input.client.session.prompt({
-            path: { id: toolCtx.sessionID },
-            body: {
-              agent: toolCtx.agent,
-              noReply: true,
-              parts: [{ type: "text", text }],
-            },
-          });
-        };
-
-        await sendSilentPrompt(`The "${skill.name}" skill is loading\n${skill.name}`);
-        await sendSilentPrompt(`Base directory for this skill: ${skill.directory}\n\n${skill.content}`);
-
-        return `Launching skill: ${skill.name}`;
-      },
-    });
-  }
-
-  return { tool: tools };
 };
 
 export {
@@ -255,3 +297,5 @@ export {
   generateToolName,
   parseSkill,
 };
+
+export default SkillsPlugin;

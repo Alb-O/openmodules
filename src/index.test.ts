@@ -97,4 +97,17 @@ describe("skills plugin helpers", () => {
 
     expect(toolName).toBe("skills_docs_api_guides");
   });
+
+  it("handles missing baseDir when generating tool names", () => {
+    const baseDir = path.join(tempDir, ".opencode", "skills");
+    const skillPath = path.join(baseDir, "solo", "SKILL.md");
+    const toolName = generateToolName(skillPath);
+
+    expect(toolName).toBe("skills_solo");
+  });
+
+  it("returns fallback tool name when skillPath is invalid", () => {
+    const toolName = generateToolName(undefined as unknown as string);
+    expect(toolName).toBe("skills_unknown");
+  });
 });
