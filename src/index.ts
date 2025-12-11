@@ -38,14 +38,12 @@ const SkillsPlugin: Plugin = async (input) => {
             });
           };
 
-          const fileTree = await generateFileTree(skill.directory);
+          const fileTree = await generateFileTree(skill.directory, { includeMetadata: true });
           const treeSection = fileTree
-            ? `\n\n## Skill Directory Structure\n\`\`\`\n${fileTree}\n\`\`\``
+            ? `\n\n## Available Resources:\n\`\`\`\n${fileTree}\n\`\`\``
             : "";
 
-          await sendSilentPrompt(`The "${skill.name}" skill is loading\n${skill.name}`);
           await sendSilentPrompt(`Base directory for this skill: ${skill.directory}\n\n${skill.content}${treeSection}`);
-
           return `Launching skill: ${skill.name}`;
         },
       });

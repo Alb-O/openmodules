@@ -5,6 +5,7 @@ import { basename, dirname, join, relative, sep } from "path";
 import ignore, { type Ignore } from "ignore";
 import { z } from "zod";
 import pkg from "../package.json";
+import { extractSkillPart } from "./comment-parser";
 
 export interface Skill {
   name: string;
@@ -254,12 +255,15 @@ export interface FileTreeOptions {
   exclude?: RegExp[];
   dirsFirst?: boolean;
   ignoreFile?: string;
+  includeMetadata?: boolean;
 }
 
-const DEFAULT_EXCLUDE_PATTERNS = [/node_modules/, /\.git/, /dist/, /\.DS_Store/, /^\.ignore$/];
+// Hide these files/directories by default. The agent doesn't need to see SKILL.md, it should already be in context.
+const DEFAULT_EXCLUDE_PATTERNS = [/SKILL\.md/, /^\.ignore$/, /^\.skill-part(\.txt)?$/, /\.git/, /node_modules/, /dist/, /\.DS_Store/];
 
 interface TreeEntry {
   name: string;
+  path: string;
   isDirectory: boolean;
 }
 
@@ -277,6 +281,47 @@ async function loadIgnoreFile(filePath: string): Promise<Ignore | null> {
 }
 
 /**
+ * Reads a .skill-part or .skill-part.txt file from a directory.
+ * Returns the raw content as description, or null if not found.
+ */
+async function getDirSkillPart(dirPath: string): Promise<string | null> {
+  for (const filename of [".skill-part", ".skill-part.txt"]) {
+    try {
+      const content = await fs.readFile(join(dirPath, filename), "utf-8");
+      const trimmed = content.trim();
+      if (trimmed) {
+        const truncated = trimmed.length > 80 ? `${trimmed.slice(0, 77)}...` : trimmed;
+        return `# ${truncated}`;
+      }
+    } catch {
+      // File doesn't exist, try next
+    }
+  }
+  return null;
+}
+
+/**
+ * Extracts a short inline description from file using skill-part marker.
+ * Returns format: "# description" or null if no marker found.
+ */
+async function getFileInlineComment(filePath: string): Promise<string | null> {
+  try {
+    const content = await fs.readFile(filePath, "utf-8");
+    const skillPart = extractSkillPart(content);
+
+    if (skillPart) {
+      // Truncate if too long
+      const truncated = skillPart.length > 80 ? `${skillPart.slice(0, 77)}...` : skillPart;
+      return `# ${truncated}`;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Generates an ASCII file tree representation of a directory.
  * Pure async implementation using fs.promises.
  * Supports .ignore file with gitignore syntax.
@@ -287,6 +332,7 @@ export async function generateFileTree(directory: string, options: FileTreeOptio
     exclude = DEFAULT_EXCLUDE_PATTERNS,
     dirsFirst = true,
     ignoreFile = ".ignore",
+    includeMetadata = false,
   } = options;
 
   // Load .ignore file from root directory
@@ -329,7 +375,7 @@ export async function generateFileTree(directory: string, options: FileTreeOptio
         if (ig.ignores(pathToCheck)) continue;
       }
 
-      items.push({ name: entry.name, isDirectory: isDir });
+      items.push({ name: entry.name, path: join(dir, entry.name), isDirectory: isDir });
     }
 
     // Sort: directories first (if enabled), then alphabetically
@@ -348,7 +394,18 @@ export async function generateFileTree(directory: string, options: FileTreeOptio
       const connector = isLast ? "└── " : "├── ";
       const displayName = item.isDirectory ? `${item.name}/` : item.name;
 
-      lines.push(`${prefix}${connector}${displayName}`);
+      // Get inline metadata comment for files or directories
+      let inlineComment = "";
+      if (includeMetadata) {
+        const comment = item.isDirectory
+          ? await getDirSkillPart(item.path)
+          : await getFileInlineComment(item.path);
+        if (comment) {
+          inlineComment = `  ${comment}`;
+        }
+      }
+
+      lines.push(`${prefix}${connector}${displayName}${inlineComment}`);
 
       if (item.isDirectory) {
         const newPrefix = prefix + (isLast ? "    " : "│   ");
