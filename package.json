@@ -18,12 +18,15 @@
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target node && bun run build:types",
     "build:types": "tsc --emitDeclarationOnly --declaration --outDir ./dist",
-    "test": "bun test ./src --timeout 120000",
+    "test": "bun test src/ --timeout 120000",
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "gray-matter": "^4.0",
+    "https-proxy-agent": "^7.0.6",
     "ignore": "^7.0.5",
+    "picocolors": "^1.1.1",
+    "tar": "^7.4.3",
     "zod": "^4.1"
   },
   "peerDependencies": {

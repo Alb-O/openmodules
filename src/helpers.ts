@@ -213,29 +213,6 @@ export async function discoverModules(basePaths: unknown): Promise<Module[]> {
     }
   }
 
-  const modules: Module[] = [];
-  let foundExistingDir = false;
-
-  for (const basePath of paths) {
-    try {
-      const matches = await findModuleFiles(basePath);
-      foundExistingDir = true;
-
-for (const match of matches) {
-        const module = await parseModule(match, basePath);
-        if (module) {
-          modules.push(module);
-        }
-      }
-      }
-    } catch (error: any) {
-      if (error?.code === "ENOENT") {
-        continue;
-      }
-      logWarning(`Unexpected error while scanning modules in ${basePath}:`, error);
-    }
-  }
-
   if (!foundExistingDir) {
     logWarning(
       "No modules directories found. Checked:\n" +

@@ -1,0 +1,3 @@
+[submodule "vendor/tiged"]
+	path = vendor/tiged
+	url = https://github.com/Alb-O/tiged.git
