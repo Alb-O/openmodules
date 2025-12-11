@@ -1,6 +1,6 @@
 {
-  "name": "@opencodium/skills",
-  "version": "0.1.7",
+  "name": "openskills",
+  "version": "0.1.0",
   "description": "OpenCode plugin that discovers SKILL.md files and exposes them as tools",
   "type": "module",
   "main": "./dist/index.js",
@@ -41,7 +41,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Alb-O/opencodium",
-    "directory": "packages/skills"
+    "url": "https://github.com/AlteredCarbonate/openskills"
   }
 }
