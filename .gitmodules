@@ -1,6 +1,3 @@
-[submodule "vendor/tiged"]
-	path = vendor/tiged
-	url = https://github.com/Alb-O/tiged.git
 [submodule ".openmodules/affinity-extractor"]
 	path = .openmodules/affinity-extractor
 	url = https://github.com/Alb-O/om.affinity-extractor.git
