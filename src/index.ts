@@ -2,7 +2,7 @@ import type { Plugin } from "@opencode-ai/plugin";
 import { tool } from "@opencode-ai/plugin";
 import os from "os";
 import { join } from "path";
-import { discoverSkills, logError } from "./helpers";
+import { discoverSkills, generateFileTree, logError } from "./helpers";
 
 const SkillsPlugin: Plugin = async (input) => {
   try {
@@ -38,8 +38,13 @@ const SkillsPlugin: Plugin = async (input) => {
             });
           };
 
+          const fileTree = await generateFileTree(skill.directory);
+          const treeSection = fileTree
+            ? `\n\n## Skill Directory Structure\n\`\`\`\n${fileTree}\n\`\`\``
+            : "";
+
           await sendSilentPrompt(`The "${skill.name}" skill is loading\n${skill.name}`);
-          await sendSilentPrompt(`Base directory for this skill: ${skill.directory}\n\n${skill.content}`);
+          await sendSilentPrompt(`Base directory for this skill: ${skill.directory}\n\n${skill.content}${treeSection}`);
 
           return `Launching skill: ${skill.name}`;
         },

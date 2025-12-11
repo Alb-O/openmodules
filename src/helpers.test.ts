@@ -3,7 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
-import { discoverSkills, findSkillFiles, generateToolName, parseSkill, type Skill } from "./helpers";
+import { discoverSkills, findSkillFiles, generateFileTree, generateToolName, parseSkill, type Skill } from "./helpers";
 
 function skillFileContents(name: string, description = "This is a sufficiently long description for testing.") {
   return `---
@@ -108,5 +108,53 @@ describe("skills helpers", () => {
   it("returns fallback tool name when skillPath is invalid", () => {
     const toolName = generateToolName(undefined as unknown as string);
     expect(toolName).toBe("skills_unknown");
+  });
+
+  describe("generateFileTree", () => {
+    it("generates ASCII tree for a directory", async () => {
+      const skillDir = path.join(tempDir, "tree-test");
+      await fs.mkdir(path.join(skillDir, "src"), { recursive: true });
+      await fs.writeFile(path.join(skillDir, "SKILL.md"), "# Skill");
+      await fs.writeFile(path.join(skillDir, "src", "main.ts"), "export {}");
+      await fs.writeFile(path.join(skillDir, "src", "utils.ts"), "export {}");
+
+      const tree = await generateFileTree(skillDir);
+
+      expect(tree).toContain("src/");
+      expect(tree).toContain("SKILL.md");
+      expect(tree).toContain("main.ts");
+      expect(tree).toContain("utils.ts");
+      // Check for tree characters (├, └, │)
+      expect(tree).toMatch(/[├└│]/);
+    });
+
+    it("excludes node_modules by default", async () => {
+      const skillDir = path.join(tempDir, "exclude-test");
+      await fs.mkdir(path.join(skillDir, "node_modules", "some-pkg"), { recursive: true });
+      await fs.mkdir(path.join(skillDir, "src"), { recursive: true });
+      await fs.writeFile(path.join(skillDir, "src", "index.ts"), "export {}");
+
+      const tree = await generateFileTree(skillDir);
+
+      expect(tree).not.toContain("node_modules");
+      expect(tree).toContain("src/");
+    });
+
+    it("respects maxDepth option", async () => {
+      const skillDir = path.join(tempDir, "depth-test");
+      await fs.mkdir(path.join(skillDir, "a", "b", "c", "d"), { recursive: true });
+      await fs.writeFile(path.join(skillDir, "a", "b", "c", "d", "deep.ts"), "export {}");
+
+      const tree = await generateFileTree(skillDir, { maxDepth: 2 });
+
+      expect(tree).toContain("a/");
+      expect(tree).toContain("b/");
+      expect(tree).not.toContain("deep.ts");
+    });
+
+    it("returns empty string for non-existent directory", async () => {
+      const tree = await generateFileTree(path.join(tempDir, "does-not-exist"));
+      expect(tree).toBe("");
+    });
   });
 });

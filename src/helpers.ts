@@ -247,3 +247,97 @@ export function getDefaultSkillPaths(rootDir: string): string[] {
     join(rootDir, ".opencode", "skills"),
   ];
 }
+
+export interface FileTreeOptions {
+  maxDepth?: number;
+  exclude?: RegExp[];
+  dirsFirst?: boolean;
+}
+
+const DEFAULT_EXCLUDE_PATTERNS = [/node_modules/, /\.git/, /dist/, /\.DS_Store/];
+
+interface TreeEntry {
+  name: string;
+  isDirectory: boolean;
+}
+
+/**
+ * Generates an ASCII file tree representation of a directory.
+ * Pure async implementation using fs.promises.
+ */
+export async function generateFileTree(directory: string, options: FileTreeOptions = {}): Promise<string> {
+  const { maxDepth = 4, exclude = DEFAULT_EXCLUDE_PATTERNS, dirsFirst = true } = options;
+
+  const shouldExclude = (name: string): boolean => {
+    return exclude.some((pattern) => pattern.test(name));
+  };
+
+  const buildTree = async (dir: string, prefix: string, depth: number): Promise<string[]> => {
+    if (depth > maxDepth) return [];
+
+    let entries: Dirent[];
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return [];
+    }
+
+    // Filter and map to TreeEntry
+    const items: TreeEntry[] = [];
+    for (const entry of entries) {
+      if (shouldExclude(entry.name)) continue;
+
+      let isDir = entry.isDirectory();
+      if (entry.isSymbolicLink()) {
+        try {
+          const stat = await fs.stat(join(dir, entry.name));
+          isDir = stat.isDirectory();
+        } catch {
+          continue; // Skip broken symlinks
+        }
+      }
+
+      items.push({ name: entry.name, isDirectory: isDir });
+    }
+
+    // Sort: directories first (if enabled), then alphabetically
+    items.sort((a, b) => {
+      if (dirsFirst) {
+        if (a.isDirectory && !b.isDirectory) return -1;
+        if (!a.isDirectory && b.isDirectory) return 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    const lines: string[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const isLast = i === items.length - 1;
+      const connector = isLast ? "└── " : "├── ";
+      const displayName = item.isDirectory ? `${item.name}/` : item.name;
+
+      lines.push(`${prefix}${connector}${displayName}`);
+
+      if (item.isDirectory) {
+        const newPrefix = prefix + (isLast ? "    " : "│   ");
+        const subLines = await buildTree(join(dir, item.name), newPrefix, depth + 1);
+        lines.push(...subLines);
+      }
+    }
+
+    return lines;
+  };
+
+  try {
+    // Check if directory exists first
+    const stat = await fs.stat(directory);
+    if (!stat.isDirectory()) return "";
+
+    const rootName = basename(directory);
+    const treeLines = await buildTree(directory, "", 1);
+    return [`${rootName}/`, ...treeLines].join("\n");
+  } catch (error) {
+    logWarning(`Failed to generate file tree for ${directory}:`, error);
+    return "";
+  }
+}
