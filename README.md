@@ -4,10 +4,32 @@ Discovers modules and exposes each as a tool named `modules_<name>`. The plugin 
 
 When a module tool is invoked, the plugin injects the module content into the session. It also generates a flat listing of absolute file paths within the module directory, making scripts directly executable without path confusion.
 
+## Design Philosophy
+
+Each openmodule is a standalone git repository. This enables:
+- Version control and history for each module
+- Easy sharing via `git clone` or `git submodule add`
+- Independent versioning and updates
+
+**Naming convention**: We recommend prefixing repository names with `om.` for organizational and filtering purposes (e.g., `om.database-tools`, `om.deploy-scripts`).
+
 ## Installation
 
+### As a project-local module
+
 ```bash
-bun add openmodules
+# Clone directly into your project's .openmodules directory
+git clone https://github.com/user/om.my-module .openmodules/my-module
+
+# Or add as a submodule for version tracking
+git submodule add https://github.com/user/om.my-module .openmodules/my-module
+```
+
+### As a global module
+
+```bash
+# Clone into your global modules directory
+git clone https://github.com/user/om.my-module ~/.config/openmodules/my-module
 ```
 
 ## Module Structure
