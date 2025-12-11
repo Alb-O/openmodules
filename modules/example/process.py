@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# skill-part: Python utility for data processing
+# oneliner: Python utility for data processing
 
 def process_data(data):
     """Process input data and return results."""

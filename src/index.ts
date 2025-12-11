@@ -2,27 +2,23 @@ import type { Plugin } from "@opencode-ai/plugin";
 import { tool } from "@opencode-ai/plugin";
 import os from "os";
 import { join } from "path";
-import { discoverSkills, generateFileTree, logError } from "./helpers";
+import { discoverModules, generateFileTree, logError, getDefaultModulePaths } from "./helpers";
 
-const SkillsPlugin: Plugin = async (input) => {
+const ModulesPlugin: Plugin = async (input) => {
   try {
-    const skills = await discoverSkills([
-      join(process.env.XDG_CONFIG_HOME || os.homedir(), process.env.XDG_CONFIG_HOME ? "opencode/skills" : ".config/opencode/skills"),
-      join(os.homedir(), ".opencode", "skills"),
-      join(input.directory, ".opencode", "skills"),
-    ]);
+    const modules = await discoverModules(getDefaultModulePaths(input.directory));
 
-    if (skills.length === 0) {
+    if (modules.length === 0) {
       return {};
     }
 
     const tools: Record<string, ReturnType<typeof tool>> = {};
 
-    for (const skill of skills) {
-      if (!skill.toolName) continue;
+    for (const module of modules) {
+      if (!module.toolName) continue;
 
-      tools[skill.toolName] = tool({
-        description: skill.description,
+      tools[module.toolName] = tool({
+        description: module.description,
         args: {},
         async execute(_, toolCtx) {
           const sendSilentPrompt = async (text: string) => {
@@ -38,22 +34,22 @@ const SkillsPlugin: Plugin = async (input) => {
             });
           };
 
-          const fileTree = await generateFileTree(skill.directory, { includeMetadata: true });
+          const fileTree = await generateFileTree(module.directory, { includeMetadata: true });
           const treeSection = fileTree
             ? `\n\n## Available Resources:\n\`\`\`\n${fileTree}\n\`\`\``
             : "";
 
-          await sendSilentPrompt(`Base directory for this skill: ${skill.directory}\n\n${skill.content}${treeSection}`);
-          return `Launching skill: ${skill.name}`;
+          await sendSilentPrompt(`Base directory for this module: ${module.directory}\n\n${module.content}${treeSection}`);
+          return `Launching module: ${module.name}`;
         },
       });
     }
 
     return { tool: tools };
   } catch (error) {
-    logError("Failed to initialize skills plugin:", error);
+    logError("Failed to initialize modules plugin:", error);
     return {};
   }
 };
 
-export default SkillsPlugin;
+export default ModulesPlugin;

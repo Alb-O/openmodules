@@ -1,4 +1,4 @@
-# skill-part: devshell containing needed packages for scripts 
+# oneliner: devshell containing needed packages for scripts 
 {
   description = "affinity-extractor";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";

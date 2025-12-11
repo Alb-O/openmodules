@@ -1,29 +1,29 @@
 /**
- * Simple parser that looks for "skill-part:" in the first few lines of a file.
+ * Simple parser that looks for "oneliner:" in the first few lines of a file.
  * Works with any file type - just scans for the marker string.
  */
 
 const MAX_LINES_TO_SCAN = 10;
-const SKILL_PART_MARKER = "skill-part:";
+const ONELINER_MARKER = "oneliner:";
 
 /**
- * Extract the skill-part description from the top of a file.
- * Looks for "skill-part:" anywhere in the first few lines and extracts the rest of that line.
+ * Extract the oneliner description from the top of a file.
+ * Looks for "oneliner:" anywhere in the first few lines and extracts the rest of that line.
  * 
  * @example
- * // skill-part: Database backup utilities
- * # skill-part: Helper functions for API calls
- * <!-- skill-part: Documentation templates -->
- * """ skill-part: Data processing module """
+ * // oneliner: Database backup utilities
+ * # oneliner: Helper functions for API calls
+ * <!-- oneliner: Documentation templates -->
+ * """ oneliner: Data processing module """
  */
-export function extractSkillPart(content: string): string | null {
+export function extractOneliner(content: string): string | null {
   const lines = content.split("\n").slice(0, MAX_LINES_TO_SCAN);
 
   for (const line of lines) {
-    const markerIndex = line.toLowerCase().indexOf(SKILL_PART_MARKER);
+    const markerIndex = line.toLowerCase().indexOf(ONELINER_MARKER);
     if (markerIndex !== -1) {
-      // Extract everything after "skill-part:"
-      const afterMarker = line.slice(markerIndex + SKILL_PART_MARKER.length).trim();
+      // Extract everything after "oneliner:"
+      const afterMarker = line.slice(markerIndex + ONELINER_MARKER.length).trim();
       
       // Clean up common trailing comment syntax
       const cleaned = afterMarker

@@ -1,5 +1,5 @@
 {
-  description = "OpenCode Skills Plugin";
+  description = "OpenCode Modules Plugin";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";

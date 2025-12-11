@@ -5,9 +5,9 @@ import { basename, dirname, join, relative, sep } from "path";
 import ignore, { type Ignore } from "ignore";
 import { z } from "zod";
 import pkg from "../package.json";
-import { extractSkillPart } from "./comment-parser";
+import { extractOneliner } from "./comment-parser";
 
-export interface Skill {
+export interface Module {
   name: string;
   directory: string;
   toolName: string;
@@ -19,9 +19,9 @@ export interface Skill {
   path: string;
 }
 
-const SKILL_FILENAME = "SKILL.md";
+const MODULE_FILENAME = "MODULE.md";
 
-const SkillFrontmatterSchema = z.object({
+const ModuleFrontmatterSchema = z.object({
   name: z
     .string()
     .regex(/^[a-z0-9-]+$/, "Name must be lowercase alphanumeric with hyphens")
@@ -32,7 +32,7 @@ const SkillFrontmatterSchema = z.object({
   metadata: z.record(z.string(), z.string()).optional(),
 });
 
-type SkillFrontmatter = z.infer<typeof SkillFrontmatterSchema>;
+type ModuleFrontmatter = z.infer<typeof ModuleFrontmatterSchema>;
 
 export function logWarning(message: string, ...args: unknown[]) {
   console.warn(`[${pkg.name}] ${message}`, ...args);
@@ -42,77 +42,77 @@ export function logError(message: string, ...args: unknown[]) {
   console.error(`[${pkg.name}] ${message}`, ...args);
 }
 
-export function generateToolName(skillPath: string, baseDir?: string): string {
-  if (typeof skillPath !== "string" || skillPath.length === 0) {
-    logWarning("Received invalid skill path while generating tool name; defaulting to skills_unknown.");
-    return "skills_unknown";
+export function generateToolName(modulePath: string, baseDir?: string): string {
+  if (typeof modulePath !== "string" || modulePath.length === 0) {
+    logWarning("Received invalid module path while generating tool name; defaulting to modules_unknown.");
+    return "modules_unknown";
   }
 
-  const safeBase = typeof baseDir === "string" && baseDir.length > 0 ? baseDir : dirname(skillPath);
-  const relativePath = relative(safeBase, skillPath);
+  const safeBase = typeof baseDir === "string" && baseDir.length > 0 ? baseDir : dirname(modulePath);
+  const relativePath = relative(safeBase, modulePath);
   const dirPath = dirname(relativePath);
 
   if (dirPath === "." || dirPath === "") {
-    const folder = basename(dirname(skillPath));
-    return `skills_${folder.replace(/-/g, "_")}`;
+    const folder = basename(dirname(modulePath));
+    return `modules_${folder.replace(/-/g, "_")}`;
   }
 
   const components = dirPath.split(sep).filter((part) => part !== ".");
-  return `skills_${components.join("_").replace(/-/g, "_")}`;
+  return `modules_${components.join("_").replace(/-/g, "_")}`;
 }
 
-function logFrontmatterErrors(skillPath: string, error: z.ZodError<SkillFrontmatter>) {
-  logError(`Invalid frontmatter in ${skillPath}:`);
+function logFrontmatterErrors(modulePath: string, error: z.ZodError<ModuleFrontmatter>) {
+  logError(`Invalid frontmatter in ${modulePath}:`);
   for (const issue of error.issues) {
     logError(` - ${issue.path.join(".")}: ${issue.message}`);
   }
 }
 
-export async function parseSkill(skillPath: string, baseDir: string): Promise<Skill | null> {
-  if (typeof skillPath !== "string" || skillPath.length === 0) {
-    logWarning("Skipping skill with invalid path:", skillPath);
+export async function parseModule(modulePath: string, baseDir: string): Promise<Module | null> {
+  if (typeof modulePath !== "string" || modulePath.length === 0) {
+    logWarning("Skipping module with invalid path:", modulePath);
     return null;
   }
 
   try {
-    const raw = await fs.readFile(skillPath, "utf8");
+    const raw = await fs.readFile(modulePath, "utf8");
     const { data, content } = matter(raw);
-    const parsed = SkillFrontmatterSchema.safeParse(data);
+    const parsed = ModuleFrontmatterSchema.safeParse(data);
 
     if (!parsed.success) {
-      logFrontmatterErrors(skillPath, parsed.error);
+      logFrontmatterErrors(modulePath, parsed.error);
       return null;
     }
 
-    const skillDirectory = dirname(skillPath);
-    const skillFolderName = basename(skillDirectory);
+    const moduleDirectory = dirname(modulePath);
+    const moduleFolderName = basename(moduleDirectory);
 
-    if (parsed.data.name !== skillFolderName) {
+    if (parsed.data.name !== moduleFolderName) {
       logError(
-        `Name mismatch in ${skillPath}: frontmatter name "${parsed.data.name}" does not match directory "${skillFolderName}".`,
+        `Name mismatch in ${modulePath}: frontmatter name "${parsed.data.name}" does not match directory "${moduleFolderName}".`,
       );
       return null;
     }
 
     return {
       name: parsed.data.name,
-      directory: skillDirectory,
-      toolName: generateToolName(skillPath, baseDir),
+      directory: moduleDirectory,
+      toolName: generateToolName(modulePath, baseDir),
       description: parsed.data.description,
       allowedTools: parsed.data["allowed-tools"],
       metadata: parsed.data.metadata,
       license: parsed.data.license,
       content: content.trim(),
-      path: skillPath,
+      path: modulePath,
     };
   } catch (error) {
-    logError(`Error parsing skill ${skillPath}:`, error);
+    logError(`Error parsing module ${modulePath}:`, error);
     return null;
   }
 }
 
-export async function findSkillFiles(basePath: string): Promise<string[]> {
-  const skillFiles: string[] = [];
+export async function findModuleFiles(basePath: string): Promise<string[]> {
+  const moduleFiles: string[] = [];
   const visited = new Set<string>();
   const queue = [basePath];
 
@@ -163,13 +163,13 @@ export async function findSkillFiles(basePath: string): Promise<string[]> {
 
       if (stat.isDirectory()) {
         queue.push(fullPath);
-      } else if (stat.isFile() && entry.name === SKILL_FILENAME) {
-        skillFiles.push(fullPath);
+      } else if (stat.isFile() && entry.name === MODULE_FILENAME) {
+        moduleFiles.push(fullPath);
       }
     }
   }
 
-  return skillFiles;
+  return moduleFiles;
 }
 
 function normalizeBasePaths(basePaths: unknown): string[] {
@@ -181,41 +181,64 @@ function normalizeBasePaths(basePaths: unknown): string[] {
     return [basePaths];
   }
 
-  logWarning("Invalid basePaths provided to discoverSkills; expected string[] or string.");
+  logWarning("Invalid basePaths provided to discoverModules; expected string[] or string.");
   return [];
 }
 
-export async function discoverSkills(basePaths: unknown): Promise<Skill[]> {
+export async function discoverModules(basePaths: unknown): Promise<Module[]> {
   const paths = normalizeBasePaths(basePaths);
   if (paths.length === 0) {
     return [];
   }
 
-  const skills: Skill[] = [];
+  const modules: Module[] = [];
   let foundExistingDir = false;
 
   for (const basePath of paths) {
     try {
-      const matches = await findSkillFiles(basePath);
+      const matches = await findModuleFiles(basePath);
       foundExistingDir = true;
 
       for (const match of matches) {
-        const skill = await parseSkill(match, basePath);
-        if (skill) {
-          skills.push(skill);
+        const module = await parseModule(match, basePath);
+        if (module) {
+          modules.push(module);
         }
       }
     } catch (error: any) {
       if (error?.code === "ENOENT") {
         continue;
       }
-      logWarning(`Unexpected error while scanning skills in ${basePath}:`, error);
+      logWarning(`Unexpected error while scanning modules in ${basePath}:`, error);
+    }
+  }
+
+  const modules: Module[] = [];
+  let foundExistingDir = false;
+
+  for (const basePath of paths) {
+    try {
+      const matches = await findModuleFiles(basePath);
+      foundExistingDir = true;
+
+for (const match of matches) {
+        const module = await parseModule(match, basePath);
+        if (module) {
+          modules.push(module);
+        }
+      }
+      }
+    } catch (error: any) {
+      if (error?.code === "ENOENT") {
+        continue;
+      }
+      logWarning(`Unexpected error while scanning modules in ${basePath}:`, error);
     }
   }
 
   if (!foundExistingDir) {
     logWarning(
-      "No skills directories found. Checked:\n" +
+      "No modules directories found. Checked:\n" +
         paths.map((path) => `  - ${path}`).join("\n"),
     );
   }
@@ -223,30 +246,30 @@ export async function discoverSkills(basePaths: unknown): Promise<Skill[]> {
   const toolNames = new Set<string>();
   const duplicates: string[] = [];
 
-  for (const skill of skills) {
-    if (toolNames.has(skill.toolName)) {
-      duplicates.push(skill.toolName);
+  for (const module of modules) {
+    if (toolNames.has(module.toolName)) {
+      duplicates.push(module.toolName);
     }
-    toolNames.add(skill.toolName);
+    toolNames.add(module.toolName);
   }
 
   if (duplicates.length > 0) {
     logWarning(`Duplicate tool names detected: ${duplicates.join(", ")}`);
   }
 
-  return skills;
+  return modules;
 }
 
-export function getDefaultSkillPaths(rootDir: string): string[] {
+export function getDefaultModulePaths(rootDir: string): string[] {
   const xdgConfigHome = process.env.XDG_CONFIG_HOME;
-  const configSkillsPath = xdgConfigHome
-    ? join(xdgConfigHome, "opencode", "skills")
-    : join(os.homedir(), ".config", "opencode", "skills");
+  const configModulesPath = xdgConfigHome
+    ? join(xdgConfigHome, "opencode", "modules")
+    : join(os.homedir(), ".config", "opencode", "modules");
 
   return [
-    configSkillsPath,
-    join(os.homedir(), ".opencode", "skills"),
-    join(rootDir, ".opencode", "skills"),
+    configModulesPath,
+    join(os.homedir(), ".opencode", "modules"),
+    join(rootDir, ".opencode", "modules"),
   ];
 }
 
@@ -258,8 +281,8 @@ export interface FileTreeOptions {
   includeMetadata?: boolean;
 }
 
-// Hide these files/directories by default. The agent doesn't need to see SKILL.md, it should already be in context.
-const DEFAULT_EXCLUDE_PATTERNS = [/SKILL\.md/, /^\.ignore$/, /^\.skill-part(\.txt)?$/, /\.git/, /node_modules/, /dist/, /\.DS_Store/];
+// Hide these files/directories by default. The agent doesn't need to see MODULE.md, it should already be in context.
+const DEFAULT_EXCLUDE_PATTERNS = [/MODULE\.md/, /^\.ignore$/, /^\.oneliner(\.txt)?$/, /\.git/, /node_modules/, /dist/, /\.DS_Store/];
 
 interface TreeEntry {
   name: string;
@@ -281,11 +304,11 @@ async function loadIgnoreFile(filePath: string): Promise<Ignore | null> {
 }
 
 /**
- * Reads a .skill-part or .skill-part.txt file from a directory.
+ * Reads a .oneliner or .oneliner.txt file from a directory.
  * Returns the raw content as description, or null if not found.
  */
-async function getDirSkillPart(dirPath: string): Promise<string | null> {
-  for (const filename of [".skill-part", ".skill-part.txt"]) {
+async function getDirOneliner(dirPath: string): Promise<string | null> {
+  for (const filename of [".oneliner", ".oneliner.txt"]) {
     try {
       const content = await fs.readFile(join(dirPath, filename), "utf-8");
       const trimmed = content.trim();
@@ -301,17 +324,17 @@ async function getDirSkillPart(dirPath: string): Promise<string | null> {
 }
 
 /**
- * Extracts a short inline description from file using skill-part marker.
+ * Extracts a short inline description from file using oneliner marker.
  * Returns format: "# description" or null if no marker found.
  */
 async function getFileInlineComment(filePath: string): Promise<string | null> {
   try {
     const content = await fs.readFile(filePath, "utf-8");
-    const skillPart = extractSkillPart(content);
+    const oneliner = extractOneliner(content);
 
-    if (skillPart) {
+    if (oneliner) {
       // Truncate if too long
-      const truncated = skillPart.length > 80 ? `${skillPart.slice(0, 77)}...` : skillPart;
+      const truncated = oneliner.length > 80 ? `${oneliner.slice(0, 77)}...` : oneliner;
       return `# ${truncated}`;
     }
 
@@ -323,7 +346,7 @@ async function getFileInlineComment(filePath: string): Promise<string | null> {
 
 /**
  * Generates a flat list of absolute file paths in a directory.
- * Supports .ignore file with gitignore syntax and skill-part descriptions.
+ * Supports .ignore file with gitignore syntax and oneliner descriptions.
  */
 export async function generateFileTree(directory: string, options: FileTreeOptions = {}): Promise<string> {
   const {
@@ -354,7 +377,7 @@ export async function generateFileTree(directory: string, options: FileTreeOptio
 
     // Get directory description if it has one
     if (includeMetadata && dir !== directory) {
-      const dirComment = await getDirSkillPart(dir);
+      const dirComment = await getDirOneliner(dir);
       if (dirComment) {
         lines.push(`${dir}/  ${dirComment}`);
       }

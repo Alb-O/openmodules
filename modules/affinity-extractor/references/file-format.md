@@ -1,5 +1,5 @@
 ---
-skill-part: "reference for manual extraction or debugging"
+oneliner: "reference for manual extraction or debugging"
 ---
 
 # Affinity Designer File Format Reference
