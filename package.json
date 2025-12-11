@@ -1,6 +1,6 @@
 {
   "name": "@opencodium/skills",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "OpenCode plugin that discovers SKILL.md files and exposes them as tools",
   "type": "module",
   "main": "./dist/index.js",

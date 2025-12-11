@@ -3,7 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
-import { discoverSkills, findSkillFiles, generateToolName, parseSkill, type Skill } from "./index";
+import { discoverSkills, findSkillFiles, generateToolName, parseSkill, type Skill } from "./helpers";
 
 function skillFileContents(name: string, description = "This is a sufficiently long description for testing.") {
   return `---
@@ -13,7 +13,7 @@ description: ${description}
 Body of the skill.`;
 }
 
-describe("skills plugin helpers", () => {
+describe("skills helpers", () => {
   let tempDir: string;
 
   beforeEach(async () => {
@@ -81,7 +81,6 @@ describe("skills plugin helpers", () => {
     const skills = await discoverSkills([configDir, projectDir]);
     expect(skills.map((s) => s.toolName)).toEqual(["skills_shared_skill", "skills_shared_skill"]);
 
-    // Later base paths should produce the later entry consumers use (last write wins)
     const toolDescriptions = skills.reduce<Record<string, Skill>>((acc, skill) => {
       acc[skill.toolName] = skill;
       return acc;
