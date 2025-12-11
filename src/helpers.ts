@@ -322,15 +322,13 @@ async function getFileInlineComment(filePath: string): Promise<string | null> {
 }
 
 /**
- * Generates an ASCII file tree representation of a directory.
- * Pure async implementation using fs.promises.
- * Supports .ignore file with gitignore syntax.
+ * Generates a flat list of absolute file paths in a directory.
+ * Supports .ignore file with gitignore syntax and skill-part descriptions.
  */
 export async function generateFileTree(directory: string, options: FileTreeOptions = {}): Promise<string> {
   const {
     maxDepth = 4,
     exclude = DEFAULT_EXCLUDE_PATTERNS,
-    dirsFirst = true,
     ignoreFile = ".ignore",
     includeMetadata = false,
   } = options;
@@ -342,7 +340,7 @@ export async function generateFileTree(directory: string, options: FileTreeOptio
     return exclude.some((pattern) => pattern.test(name));
   };
 
-  const buildTree = async (dir: string, prefix: string, depth: number): Promise<string[]> => {
+  const collectFiles = async (dir: string, depth: number): Promise<string[]> => {
     if (depth > maxDepth) return [];
 
     let entries: Dirent[];
@@ -352,15 +350,25 @@ export async function generateFileTree(directory: string, options: FileTreeOptio
       return [];
     }
 
-    // Filter and map to TreeEntry
-    const items: TreeEntry[] = [];
+    const lines: string[] = [];
+
+    // Get directory description if it has one
+    if (includeMetadata && dir !== directory) {
+      const dirComment = await getDirSkillPart(dir);
+      if (dirComment) {
+        lines.push(`${dir}/  ${dirComment}`);
+      }
+    }
+
     for (const entry of entries) {
       if (shouldExclude(entry.name)) continue;
 
+      const fullPath = join(dir, entry.name);
       let isDir = entry.isDirectory();
+
       if (entry.isSymbolicLink()) {
         try {
-          const stat = await fs.stat(join(dir, entry.name));
+          const stat = await fs.stat(fullPath);
           isDir = stat.isDirectory();
         } catch {
           continue; // Skip broken symlinks
@@ -369,48 +377,25 @@ export async function generateFileTree(directory: string, options: FileTreeOptio
 
       // Check against .ignore patterns using relative path from root
       if (ig) {
-        const relativePath = relative(directory, join(dir, entry.name));
-        // For directories, append trailing slash to match gitignore directory patterns
+        const relativePath = relative(directory, fullPath);
         const pathToCheck = isDir ? `${relativePath}/` : relativePath;
         if (ig.ignores(pathToCheck)) continue;
       }
 
-      items.push({ name: entry.name, path: join(dir, entry.name), isDirectory: isDir });
-    }
-
-    // Sort: directories first (if enabled), then alphabetically
-    items.sort((a, b) => {
-      if (dirsFirst) {
-        if (a.isDirectory && !b.isDirectory) return -1;
-        if (!a.isDirectory && b.isDirectory) return 1;
-      }
-      return a.name.localeCompare(b.name);
-    });
-
-    const lines: string[] = [];
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const isLast = i === items.length - 1;
-      const connector = isLast ? "└── " : "├── ";
-      const displayName = item.isDirectory ? `${item.name}/` : item.name;
-
-      // Get inline metadata comment for files or directories
-      let inlineComment = "";
-      if (includeMetadata) {
-        const comment = item.isDirectory
-          ? await getDirSkillPart(item.path)
-          : await getFileInlineComment(item.path);
-        if (comment) {
-          inlineComment = `  ${comment}`;
+      if (isDir) {
+        // Recurse into directory
+        const subFiles = await collectFiles(fullPath, depth + 1);
+        lines.push(...subFiles);
+      } else {
+        // Add file with optional metadata
+        let line = fullPath;
+        if (includeMetadata) {
+          const comment = await getFileInlineComment(fullPath);
+          if (comment) {
+            line = `${fullPath}  ${comment}`;
+          }
         }
-      }
-
-      lines.push(`${prefix}${connector}${displayName}${inlineComment}`);
-
-      if (item.isDirectory) {
-        const newPrefix = prefix + (isLast ? "    " : "│   ");
-        const subLines = await buildTree(join(dir, item.name), newPrefix, depth + 1);
-        lines.push(...subLines);
+        lines.push(line);
       }
     }
 
@@ -422,11 +407,14 @@ export async function generateFileTree(directory: string, options: FileTreeOptio
     const stat = await fs.stat(directory);
     if (!stat.isDirectory()) return "";
 
-    const rootName = basename(directory);
-    const treeLines = await buildTree(directory, "", 1);
-    return [`${rootName}/`, ...treeLines].join("\n");
+    const fileLines = await collectFiles(directory, 1);
+    
+    // Sort alphabetically for consistent output
+    fileLines.sort((a, b) => a.localeCompare(b));
+    
+    return fileLines.join("\n");
   } catch (error) {
-    logWarning(`Failed to generate file tree for ${directory}:`, error);
+    logWarning(`Failed to generate file list for ${directory}:`, error);
     return "";
   }
 }

@@ -111,7 +111,7 @@ describe("skills helpers", () => {
   });
 
   describe("generateFileTree", () => {
-    it("generates ASCII tree for a directory", async () => {
+    it("generates flat list of absolute paths", async () => {
       const skillDir = path.join(tempDir, "tree-test");
       await fs.mkdir(path.join(skillDir, "src"), { recursive: true });
       await fs.writeFile(path.join(skillDir, "README.md"), "# Readme");
@@ -120,12 +120,11 @@ describe("skills helpers", () => {
 
       const tree = await generateFileTree(skillDir);
 
-      expect(tree).toContain("src/");
-      expect(tree).toContain("README.md");
-      expect(tree).toContain("main.ts");
-      expect(tree).toContain("utils.ts");
-      // Check for tree characters (├, └, │)
-      expect(tree).toMatch(/[├└│]/);
+      expect(tree).toContain(path.join(skillDir, "README.md"));
+      expect(tree).toContain(path.join(skillDir, "src", "main.ts"));
+      expect(tree).toContain(path.join(skillDir, "src", "utils.ts"));
+      // Should NOT have tree characters - it's a flat list now
+      expect(tree).not.toMatch(/[├└│]/);
     });
 
     it("excludes node_modules by default", async () => {
@@ -137,7 +136,7 @@ describe("skills helpers", () => {
       const tree = await generateFileTree(skillDir);
 
       expect(tree).not.toContain("node_modules");
-      expect(tree).toContain("src/");
+      expect(tree).toContain(path.join(skillDir, "src", "index.ts"));
     });
 
     it("respects maxDepth option", async () => {
@@ -147,8 +146,6 @@ describe("skills helpers", () => {
 
       const tree = await generateFileTree(skillDir, { maxDepth: 2 });
 
-      expect(tree).toContain("a/");
-      expect(tree).toContain("b/");
       expect(tree).not.toContain("deep.ts");
     });
 
@@ -170,8 +167,8 @@ describe("skills helpers", () => {
 
       const tree = await generateFileTree(skillDir);
 
-      expect(tree).toContain("src/");
-      expect(tree).toContain("README.md");
+      expect(tree).toContain(path.join(skillDir, "src", "index.ts"));
+      expect(tree).toContain(path.join(skillDir, "README.md"));
       expect(tree).not.toContain("secrets");
       expect(tree).not.toContain("api-key.txt");
       expect(tree).not.toContain("debug.log");
@@ -187,7 +184,6 @@ describe("skills helpers", () => {
 
       const tree = await generateFileTree(skillDir);
 
-      expect(tree).toContain("logs/");
       expect(tree).toContain("important.log");
       expect(tree).not.toContain("debug.log");
     });
@@ -199,8 +195,7 @@ describe("skills helpers", () => {
 
       const tree = await generateFileTree(skillDir);
 
-      expect(tree).toContain("src/");
-      expect(tree).toContain("index.ts");
+      expect(tree).toContain(path.join(skillDir, "src", "index.ts"));
     });
 
     it("includes inline metadata comments when includeMetadata is true", async () => {
@@ -225,9 +220,9 @@ import sys
 
       const tree = await generateFileTree(skillDir, { includeMetadata: true });
 
-      expect(tree).toContain("backup.sh");
+      expect(tree).toContain(path.join(skillDir, "backup.sh"));
       expect(tree).toContain("# Database backup utilities");
-      expect(tree).toContain("process.py");
+      expect(tree).toContain(path.join(skillDir, "process.py"));
       expect(tree).toContain("# Data processing module");
     });
 
@@ -244,7 +239,7 @@ echo "Hello"
 
       const tree = await generateFileTree(skillDir, { includeMetadata: false });
 
-      expect(tree).toContain("script.sh");
+      expect(tree).toContain(path.join(skillDir, "script.sh"));
       expect(tree).not.toContain("# My Script");
     });
 
@@ -262,11 +257,9 @@ echo "hi"
 
       const tree = await generateFileTree(skillDir, { includeMetadata: true });
 
-      expect(tree).toContain("with-meta.sh");
+      expect(tree).toContain(path.join(skillDir, "with-meta.sh"));
       expect(tree).toContain("# Has Metadata");
-      expect(tree).toContain("no-meta.txt");
-      // no-meta.txt should not have a comment appended
-      expect(tree).toMatch(/no-meta\.txt\s*$/m);
+      expect(tree).toContain(path.join(skillDir, "no-meta.txt"));
     });
 
     it("includes directory description from .skill-part file", async () => {
@@ -308,7 +301,7 @@ echo "hi"
       expect(tree).not.toContain("# From .skill-part.txt");
     });
 
-    it("hides .skill-part files from tree output", async () => {
+    it("hides .skill-part files from output", async () => {
       const skillDir = path.join(tempDir, "hide-skill-part-test");
       await fs.mkdir(skillDir, { recursive: true });
       await fs.writeFile(path.join(skillDir, ".skill-part"), "Description");
@@ -318,7 +311,7 @@ echo "hi"
       const tree = await generateFileTree(skillDir, { includeMetadata: true });
 
       expect(tree).toContain("script.sh");
-      expect(tree).not.toContain(".skill-part");
+      expect(tree).not.toMatch(/\.skill-part/);
     });
   });
 });
