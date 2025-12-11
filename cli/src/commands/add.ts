@@ -25,13 +25,13 @@ export const add = command({
       short: "g",
       description: "Install globally instead of in project",
     }),
-    submodule: flag({
-      long: "submodule",
-      short: "s",
-      description: "Add as git submodule instead of cloning",
+    clone: flag({
+      long: "clone",
+      short: "c",
+      description: "Clone instead of adding as submodule (default in git repos is submodule)",
     }),
   },
-  handler: async ({ repo, name, global: isGlobal, submodule }) => {
+  handler: async ({ repo, name, global: isGlobal, clone }) => {
     const parsed = parseRepoUrl(repo);
     if (!parsed) {
       console.error(pc.red(`Error: Invalid repository format: ${repo}`));
@@ -71,15 +71,15 @@ export const add = command({
     console.log(pc.blue(`Adding ${parsed.owner}/${parsed.repo} as ${moduleName}...`));
 
     try {
-      if (submodule && !isGlobal) {
-        // Add as submodule
+      if (!clone && !isGlobal) {
+        // Add as submodule (default for local installs in git repos)
         execSync(`git submodule add ${parsed.url} ${path.relative(projectRoot!, targetDir)}`, {
           cwd: projectRoot!,
           stdio: "inherit",
         });
         console.log(pc.green(`✓ Added as submodule: ${targetDir}`));
       } else {
-        // Clone directly
+        // Clone directly (for global or when --clone is specified)
         execSync(`git clone ${parsed.url} ${targetDir}`, {
           stdio: "inherit",
         });
