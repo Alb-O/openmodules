@@ -1,8 +1,14 @@
-# @opencodium/skills
+# openskills
 
 Discovers `SKILL.md` files following Anthropic's Agent Skills spec and exposes each as a tool named `skills_<path>`. The plugin scans three locations in priority order: `$XDG_CONFIG_HOME/opencode/skills` (or `~/.config/opencode/skills`), `~/.opencode/skills/`, and `<project>/.opencode/skills/`. Later paths override earlier ones when tool names collide.
 
 When a skill tool is invoked, the plugin injects the skill content into the session via `noReply` prompts. It also generates a flat listing of absolute file paths within the skill directory, making scripts directly executable without path confusion.
+
+## Installation
+
+```bash
+bun add openskills
+```
 
 ## File Descriptions
 
