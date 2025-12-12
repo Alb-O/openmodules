@@ -2,12 +2,11 @@ import { command, subcommands, flag, positional, string, optional } from "cmd-ts
 import pc from "picocolors";
 import {
   getCacheDir,
-  listCached,
-  clearCache,
-  removeFromCache,
+  listCachedRepos,
+  clearRepoCache,
+  removeRepoFromCache,
   ensureCached,
   formatBytes,
-  urlToCachePath,
 } from "../cache";
 import { parseRepoUrl } from "../utils";
 
@@ -16,7 +15,7 @@ const list = command({
   description: "List cached repositories",
   args: {},
   handler: async () => {
-    const cached = listCached();
+    const cached = listCachedRepos();
 
     if (cached.length === 0) {
       console.log(pc.dim("No cached repositories"));
@@ -50,7 +49,7 @@ const clear = command({
     }),
   },
   handler: async ({ force }) => {
-    const cached = listCached();
+    const cached = listCachedRepos();
 
     if (cached.length === 0) {
       console.log(pc.dim("Cache is already empty"));
@@ -80,7 +79,7 @@ const clear = command({
       }
     }
 
-    clearCache();
+    clearRepoCache();
     console.log(pc.green(`✓ Cleared ${cached.length} repos (${formatBytes(totalSize)})`));
   },
 });
@@ -90,7 +89,7 @@ const update = command({
   description: "Update all cached repositories",
   args: {},
   handler: async () => {
-    const cached = listCached();
+    const cached = listCachedRepos();
 
     if (cached.length === 0) {
       console.log(pc.dim("No cached repositories to update"));
@@ -129,7 +128,7 @@ const remove = command({
       process.exit(1);
     }
 
-    if (removeFromCache(parsed.url)) {
+    if (removeRepoFromCache(parsed.url)) {
       console.log(pc.green(`✓ Removed ${parsed.url} from cache`));
     } else {
       console.log(pc.yellow(`Repository not in cache: ${parsed.url}`));

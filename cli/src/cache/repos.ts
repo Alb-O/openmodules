@@ -3,17 +3,7 @@ import * as path from "path";
 import * as os from "os";
 import * as crypto from "crypto";
 import { execSync } from "child_process";
-
-/**
- * Get the cache directory for bare repos.
- * Uses $XDG_CACHE_HOME/openmodules or ~/.cache/openmodules
- */
-export function getCacheDir(): string {
-  const xdgCacheHome = process.env.XDG_CACHE_HOME;
-  return xdgCacheHome
-    ? path.join(xdgCacheHome, "openmodules")
-    : path.join(os.homedir(), ".cache", "openmodules");
-}
+import { getCacheDir, formatBytes, getDirSize } from "./index";
 
 /**
  * Convert a git URL to a cache path.
@@ -25,11 +15,11 @@ export function urlToCachePath(url: string): string {
   if (!match) {
     // Fallback to hash-based path for unusual URLs
     const hash = crypto.createHash("sha256").update(url).digest("hex").slice(0, 16);
-    return path.join(getCacheDir(), "other", `${hash}.git`);
+    return path.join(getCacheDir(), "repos", "other", `${hash}.git`);
   }
 
   const [, domain, owner, repo] = match;
-  return path.join(getCacheDir(), domain, owner, `${repo}.git`);
+  return path.join(getCacheDir(), "repos", domain, owner, `${repo}.git`);
 }
 
 /**
@@ -115,11 +105,11 @@ export function submoduleAddFromCache(
 /**
  * List all cached repos.
  */
-export function listCached(): Array<{ path: string; url: string; size: number }> {
-  const cacheDir = getCacheDir();
+export function listCachedRepos(): Array<{ path: string; url: string; size: number }> {
+  const reposDir = path.join(getCacheDir(), "repos");
   const results: Array<{ path: string; url: string; size: number }> = [];
 
-  if (!fs.existsSync(cacheDir)) {
+  if (!fs.existsSync(reposDir)) {
     return results;
   }
 
@@ -148,31 +138,14 @@ export function listCached(): Array<{ path: string; url: string; size: number }>
     }
   }
 
-  walkDir(cacheDir);
+  walkDir(reposDir);
   return results;
-}
-
-/**
- * Get directory size in bytes.
- */
-function getDirSize(dir: string): number {
-  let size = 0;
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      size += getDirSize(fullPath);
-    } else {
-      size += fs.statSync(fullPath).size;
-    }
-  }
-  return size;
 }
 
 /**
  * Remove a repo from cache.
  */
-export function removeFromCache(url: string): boolean {
+export function removeRepoFromCache(url: string): boolean {
   const cachePath = urlToCachePath(url);
   if (fs.existsSync(cachePath)) {
     fs.rmSync(cachePath, { recursive: true, force: true });
@@ -182,21 +155,11 @@ export function removeFromCache(url: string): boolean {
 }
 
 /**
- * Clear the entire cache.
+ * Clear all cached repos.
  */
-export function clearCache(): void {
-  const cacheDir = getCacheDir();
-  if (fs.existsSync(cacheDir)) {
-    fs.rmSync(cacheDir, { recursive: true, force: true });
+export function clearRepoCache(): void {
+  const reposDir = path.join(getCacheDir(), "repos");
+  if (fs.existsSync(reposDir)) {
+    fs.rmSync(reposDir, { recursive: true, force: true });
   }
-}
-
-/**
- * Format bytes as human readable string.
- */
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }

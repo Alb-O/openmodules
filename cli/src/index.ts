@@ -4,12 +4,14 @@ import { add } from "./commands/add";
 import { list } from "./commands/list";
 import { remove } from "./commands/remove";
 import { cache } from "./commands/cache";
+import { init } from "./commands/init";
 
 const app = subcommands({
   name: "openmodule",
   description: "CLI tool for managing openmodules",
   version: "0.1.0",
   cmds: {
+    init,
     add,
     list,
     remove,

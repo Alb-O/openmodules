@@ -16,8 +16,9 @@
     "README.md"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node && bun run build:types",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node && bun run build:types && bun run build:bundle",
     "build:types": "tsc --emitDeclarationOnly --declaration --outDir ./dist",
+    "build:bundle": "bun build ./src/index.ts --outfile ./dist/openmodules.bundle.js --target node --minify",
     "test": "bun test src/ --timeout 120000",
     "prepublishOnly": "bun run build"
   },
