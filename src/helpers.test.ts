@@ -55,16 +55,6 @@ describe("modules helpers", () => {
     expect(parsed?.content).toContain("Body of the module.");
   });
 
-  it("returns null when manifest name does not match directory", async () => {
-    const baseDir = path.join(tempDir, ".openmodules");
-    const moduleDir = path.join(baseDir, "folder-name");
-    const manifestPath = await createModule(moduleDir, "different-name");
-
-    const parsed = await parseModule(manifestPath, baseDir);
-
-    expect(parsed).toBeNull();
-  });
-
   it("follows symlinked module directories", async () => {
     const baseDir = path.join(tempDir, ".openmodules");
     const realModuleDir = path.join(tempDir, "real-module");

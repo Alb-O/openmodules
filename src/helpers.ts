@@ -128,13 +128,6 @@ export async function parseModule(
             return null;
         }
 
-        if (parsed.data.name !== moduleFolderName) {
-            logError(
-                `Name mismatch in ${manifestPath}: manifest name "${parsed.data.name}" does not match directory "${moduleFolderName}".`,
-            );
-            return null;
-        }
-
         // Read prompt file (configurable via manifest, defaults to README.md at module root)
         const promptRelativePath = parsed.data.prompt || DEFAULT_PROMPT_PATH;
         const promptPath = join(moduleDirectory, promptRelativePath);
