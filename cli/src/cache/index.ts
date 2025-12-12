@@ -14,14 +14,7 @@ export {
   clearRepoCache,
 } from "./repos";
 
-export {
-  getPluginCacheDir,
-  getPluginCachePath,
-  getBundledPlugin,
-  ensurePluginCached,
-  getInstalledPluginVersion,
-  installPlugin,
-} from "./plugins";
+export { getBundledPluginPath, installPlugin } from "./plugins";
 
 /**
  * Get the base cache directory.

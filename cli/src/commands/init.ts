@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import pc from "picocolors";
-import { installPlugin, getBundledPlugin, getInstalledPluginVersion } from "../cache";
+import { installPlugin, getBundledPluginPath } from "../cache";
 import { findProjectRoot } from "../utils";
 
 export const init = command({
@@ -18,12 +18,11 @@ export const init = command({
     force: flag({
       long: "force",
       short: "f",
-      description: "Force reinstall even if same version exists",
+      description: "Force reinstall even if already installed",
     }),
   },
   handler: async ({ global: isGlobal, force }) => {
-    const bundled = getBundledPlugin();
-    if (!bundled) {
+    if (!getBundledPluginPath()) {
       console.error(pc.red("Error: Could not find bundled plugin"));
       console.error(pc.dim("The CLI may not be properly installed"));
       process.exit(1);
@@ -46,15 +45,6 @@ export const init = command({
       targetDir = projectRoot;
     }
 
-    const pluginPath = path.join(targetDir, ".opencode", "plugin", "openmodules.js");
-    const existingVersion = getInstalledPluginVersion(pluginPath);
-
-    if (existingVersion && existingVersion === bundled.version && !force) {
-      console.log(pc.green(`✓ Plugin already installed (v${existingVersion})`));
-      console.log(pc.dim(`  ${pluginPath}`));
-      return;
-    }
-
     const result = installPlugin(targetDir, { force });
 
     if ("error" in result) {
@@ -63,13 +53,10 @@ export const init = command({
     }
 
     if (result.installed) {
-      if (existingVersion) {
-        console.log(pc.green(`✓ Plugin upgraded: v${existingVersion} → v${result.version}`));
-      } else {
-        console.log(pc.green(`✓ Plugin installed (v${result.version})`));
-      }
+      console.log(pc.green(`✓ Plugin installed`));
     } else {
-      console.log(pc.green(`✓ Plugin already up to date (v${result.version})`));
+      console.log(pc.green(`✓ Plugin already installed`));
+      console.log(pc.dim(`  Use --force to reinstall`));
     }
 
     console.log(pc.dim(`  ${result.path}`));

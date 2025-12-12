@@ -16,8 +16,7 @@ bun2nix.mkDerivation {
   installPhase = ''
     runHook preInstall
     mkdir -p $out
-    echo "// openmodules-plugin v1.0.0" > $out/openmodules.min.js
-    cat dist/openmodules.bundle.js >> $out/openmodules.min.js
+    cp dist/openmodules.bundle.js $out/openmodules.min.js
     runHook postInstall
   '';
 }

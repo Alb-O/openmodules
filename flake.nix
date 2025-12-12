@@ -56,19 +56,13 @@
         };
       });
 
-      devShells = eachSystem (system: let
-        openmodulePkg = pkgsFor.${system}.callPackage ./cli/nix {
-          bun2nix = bun2nix.packages.${system}.default;
-          src = ./cli;
-          bunNix = ./cli/nix/bun.nix;
-        };
-      in {
+      devShells = eachSystem (system: {
         default = pkgsFor.${system}.mkShell {
           packages = [
             pkgsFor.${system}.bun
             pkgsFor.${system}.nodejs
             bun2nix.packages.${system}.default
-            openmodulePkg
+            self.packages.${system}.openmodule
           ];
 
           shellHook = ''
