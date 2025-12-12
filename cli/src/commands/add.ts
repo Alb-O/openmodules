@@ -4,6 +4,7 @@ import * as fs from "fs";
 import * as path from "path";
 import pc from "picocolors";
 import { getModulePaths, findProjectRoot, parseRepoUrl, getModuleName, getSupportedDomains } from "../utils";
+import { submoduleAddFromCache, cloneFromCache, isCached } from "../cache";
 
 export const add = command({
   name: "add",
@@ -35,8 +36,12 @@ export const add = command({
       short: "f",
       description: "Force add, removing existing module if present",
     }),
+    noCache: flag({
+      long: "no-cache",
+      description: "Skip the bare repo cache, clone directly from remote",
+    }),
   },
-  handler: async ({ repo, name, global: isGlobal, clone, force }) => {
+  handler: async ({ repo, name, global: isGlobal, clone, force, noCache }) => {
     const parsed = parseRepoUrl(repo);
     if (!parsed) {
       console.error(pc.red(`Error: Invalid repository format: ${repo}`));
@@ -122,30 +127,34 @@ export const add = command({
 
     console.log(pc.blue(`Adding ${parsed.owner}/${parsed.repo} as ${moduleName}...`));
 
+    const cached = isCached(parsed.url);
+    if (cached) {
+      console.log(pc.dim("Using cached repository..."));
+    }
+
     try {
       if (!clone && !isGlobal) {
         // Add as submodule (default for local installs in git repos)
         const relativePath = path.relative(projectRoot!, targetDir);
-        const forceFlag = force ? "--force " : "";
-        execSync(`git submodule add ${forceFlag}${parsed.url} ${relativePath}`, {
-          cwd: projectRoot!,
-          stdio: "inherit",
-        });
-        // Initialize and update the submodule
-        try {
-          execSync(`git submodule update --init ${relativePath}`, {
+        if (noCache) {
+          const forceFlag = force ? "--force " : "";
+          execSync(`git submodule add ${forceFlag}${parsed.url} ${relativePath}`, {
             cwd: projectRoot!,
-            stdio: "pipe",
+            stdio: "inherit",
           });
-        } catch {
-          // May fail if repo has no commits yet, that's ok
+        } else {
+          submoduleAddFromCache(parsed.url, relativePath, projectRoot!, { force });
         }
         console.log(pc.green(`✓ Added as submodule: ${targetDir}`));
       } else {
         // Clone directly (for global or when --clone is specified)
-        execSync(`git clone ${parsed.url} ${targetDir}`, {
-          stdio: "inherit",
-        });
+        if (noCache) {
+          execSync(`git clone ${parsed.url} ${targetDir}`, {
+            stdio: "inherit",
+          });
+        } else {
+          cloneFromCache(parsed.url, targetDir);
+        }
         console.log(pc.green(`✓ Cloned to: ${targetDir}`));
       }
     } catch (error) {

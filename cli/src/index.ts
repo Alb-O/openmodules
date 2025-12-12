@@ -3,6 +3,7 @@ import { run, subcommands } from "cmd-ts";
 import { add } from "./commands/add";
 import { list } from "./commands/list";
 import { remove } from "./commands/remove";
+import { cache } from "./commands/cache";
 
 const app = subcommands({
   name: "openmodule",
@@ -12,6 +13,7 @@ const app = subcommands({
     add,
     list,
     remove,
+    cache,
   },
 });
 
