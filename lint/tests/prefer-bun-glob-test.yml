@@ -1,0 +1,12 @@
+id: prefer-bun-glob
+valid:
+  - "const glob = new Bun.Glob('**/*.ts')"
+  - "for await (const file of glob.scan('.')) { }"
+  - "const matches = glob.match('src/index.ts')"
+invalid:
+  - "import { glob } from 'glob'"
+  - "import glob from 'glob'"
+  - "import { glob } from 'fast-glob'"
+  - "import fg from 'fast-glob'"
+  - "import { globby } from 'globby'"
+  - "import globby from 'globby'"

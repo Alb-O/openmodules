@@ -1,0 +1,19 @@
+id: no-nested-ternary
+language: typescript
+severity: warning
+message: "Avoid nested ternary expressions. Use if/else or switch statements instead."
+note: |
+  Nested ternaries are hard to read and maintain.
+  
+  Instead of:
+    const x = a ? b : c ? d : e;
+  
+  Use:
+    let x;
+    if (a) x = b;
+    else if (c) x = d;
+    else x = e;
+rule:
+  kind: ternary_expression
+  has:
+    kind: ternary_expression

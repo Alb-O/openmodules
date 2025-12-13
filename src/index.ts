@@ -1,7 +1,7 @@
 import type { Plugin } from "@opencode-ai/plugin";
 import { tool } from "@opencode-ai/plugin";
-import os from "os";
-import { join } from "path";
+import os from "node:os";
+import { join } from "node:path";
 import {
   buildContextTriggerMatchers,
   discoverEngramsWithLazy,

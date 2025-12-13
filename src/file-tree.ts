@@ -1,6 +1,6 @@
-import { promises as fs, Dirent } from "fs";
-import { join, relative } from "path";
-import os from "os";
+import { promises as fs, Dirent } from "node:fs";
+import { join, relative } from "node:path";
+import os from "node:os";
 import ignore, { type Ignore } from "ignore";
 import type { FileTreeOptions } from "./types";
 import { logWarning } from "./logging";

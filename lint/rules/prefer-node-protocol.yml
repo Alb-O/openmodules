@@ -1,0 +1,40 @@
+id: prefer-node-protocol
+language: typescript
+severity: warning
+message: "Prefer 'node:' protocol for Node.js imports."
+note: |
+  Using the 'node:' protocol makes it clear you're importing a Node.js builtin.
+  
+  Instead of:
+    import path from 'path'
+    import { readFile } from 'fs/promises'
+  
+  Use:
+    import path from 'node:path'
+    import { readFile } from 'node:fs/promises'
+rule:
+  any:
+    - pattern: import $$$IMPORTS from 'path'
+    - pattern: import $$$IMPORTS from "path"
+    - pattern: import $$$IMPORTS from 'fs'
+    - pattern: import $$$IMPORTS from "fs"
+    - pattern: import $$$IMPORTS from 'fs/promises'
+    - pattern: import $$$IMPORTS from "fs/promises"
+    - pattern: import $$$IMPORTS from 'os'
+    - pattern: import $$$IMPORTS from "os"
+    - pattern: import $$$IMPORTS from 'url'
+    - pattern: import $$$IMPORTS from "url"
+    - pattern: import $$$IMPORTS from 'util'
+    - pattern: import $$$IMPORTS from "util"
+    - pattern: import $$$IMPORTS from 'child_process'
+    - pattern: import $$$IMPORTS from "child_process"
+    - pattern: import $$$IMPORTS from 'crypto'
+    - pattern: import $$$IMPORTS from "crypto"
+    - pattern: import $$$IMPORTS from 'stream'
+    - pattern: import $$$IMPORTS from "stream"
+    - pattern: import $$$IMPORTS from 'events'
+    - pattern: import $$$IMPORTS from "events"
+    - pattern: import $$$IMPORTS from 'buffer'
+    - pattern: import $$$IMPORTS from "buffer"
+    - pattern: import $$$IMPORTS from 'assert'
+    - pattern: import $$$IMPORTS from "assert"

@@ -1,0 +1,22 @@
+id: no-process-exit-in-library
+language: typescript
+severity: error
+message: "Avoid process.exit() in library code. Throw an error instead."
+note: |
+  Library code should not call process.exit() directly.
+  This terminates the entire process, preventing proper error handling.
+  CLI code (src/cli/) is exempt.
+  
+  Instead of:
+    if (error) process.exit(1);
+  
+  Use:
+    if (error) throw new Error('...');
+files:
+  - src/**/*.ts
+ignores:
+  - src/cli/**/*
+rule:
+  any:
+    - pattern: process.exit($$$)
+    - pattern: process.exit()

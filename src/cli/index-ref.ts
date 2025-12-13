@@ -6,8 +6,8 @@
  * are initialized.
  */
 
-import { existsSync, readdirSync, readFileSync } from "fs";
-import * as path from "path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import * as path from "node:path";
 import TOML from "@iarna/toml";
 
 export interface EngramIndexEntry {

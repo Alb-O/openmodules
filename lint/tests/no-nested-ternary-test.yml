@@ -1,0 +1,13 @@
+id: no-nested-ternary
+valid:
+  - "const x = a ? b : c"
+  - "const x = condition ? 'yes' : 'no'"
+  - |
+    let x;
+    if (a) x = b;
+    else if (c) x = d;
+    else x = e;
+invalid:
+  - "const x = a ? b : c ? d : e"
+  - "const x = a ? b ? c : d : e"
+  - "const result = condition1 ? value1 : condition2 ? value2 : value3"

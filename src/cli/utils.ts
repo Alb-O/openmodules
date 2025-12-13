@@ -1,6 +1,6 @@
-import { existsSync } from "fs";
-import * as os from "os";
-import * as path from "path";
+import { existsSync } from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 
 export interface ModulePaths {
   global: string;

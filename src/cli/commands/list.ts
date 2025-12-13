@@ -1,6 +1,6 @@
 import { command, flag } from "cmd-ts";
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import pc from "picocolors";
 import * as TOML from "@iarna/toml";
 import { getModulePaths, findProjectRoot, shortenPath } from "../utils";
@@ -52,6 +52,16 @@ interface EngramToml {
     ref?: string;
     sparse?: string[];
   };
+}
+
+/**
+ * Get status indicator for an engram.
+ * ● = initialized, ◐ = lazy (wrapped but not cloned), ○ = not initialized
+ */
+function getStatusDot(eg: { initialized: boolean; isWrapped?: boolean }): string {
+  if (eg.initialized) return pc.green("●");
+  if (eg.isWrapped) return pc.yellow("◐");
+  return pc.dim("○");
 }
 
 function parseEngramToml(tomlPath: string): {
@@ -216,11 +226,7 @@ function printEngramTree(
 
     // Initialization status indicator
     // ● = initialized, ◐ = lazy (wrapped but not cloned), ○ = not initialized
-    const statusDot = eg.initialized
-      ? pc.green("●")
-      : eg.isWrapped
-        ? pc.yellow("◐")
-        : pc.dim("○");
+    const statusDot = getStatusDot(eg);
 
     // Engram name and display name
     const nameDisplay =
@@ -230,11 +236,12 @@ function printEngramTree(
 
     // Description (truncated if needed)
     const maxDescLen = 50;
-    const desc = eg.description
-      ? eg.description.length > maxDescLen
+    let desc = "";
+    if (eg.description) {
+      desc = eg.description.length > maxDescLen
         ? eg.description.slice(0, maxDescLen - 3) + "..."
-        : eg.description
-      : "";
+        : eg.description;
+    }
     const descDisplay = desc ? pc.dim(` - ${desc}`) : "";
 
     // Trigger summary
@@ -392,11 +399,7 @@ export const list = command({
       if (flat) {
         const flatList = flatten(globalEngrams);
         for (const eg of flatList) {
-          const statusDot = eg.initialized
-            ? pc.green("●")
-            : eg.isWrapped
-              ? pc.yellow("◐")
-              : pc.dim("○");
+          const statusDot = getStatusDot(eg);
           const indent = "  ".repeat(eg.depth);
           console.log(`${indent}${statusDot} ${eg.name}`);
         }
@@ -416,11 +419,7 @@ export const list = command({
       if (flat) {
         const flatList = flatten(localEngrams);
         for (const eg of flatList) {
-          const statusDot = eg.initialized
-            ? pc.green("●")
-            : eg.isWrapped
-              ? pc.yellow("◐")
-              : pc.dim("○");
+          const statusDot = getStatusDot(eg);
           const indent = "  ".repeat(eg.depth);
           console.log(`${indent}${statusDot} ${eg.name}`);
         }

@@ -1,0 +1,38 @@
+id: prefer-error-cause
+language: typescript
+severity: warning
+message: "When rethrowing errors, include the original error as a cause."
+note: |
+  Preserving the original error helps with debugging by maintaining the stack trace.
+  
+  Instead of:
+    catch (e) {
+      throw new Error('Failed to process');
+    }
+  
+  Use:
+    catch (e) {
+      throw new Error('Failed to process', { cause: e });
+    }
+rule:
+  kind: catch_clause
+  has:
+    kind: statement_block
+    has:
+      kind: throw_statement
+      has:
+        kind: new_expression
+        all:
+          - has:
+              kind: identifier
+              regex: ^Error$
+          - has:
+              kind: arguments
+              not:
+                has:
+                  kind: object
+                  has:
+                    kind: pair
+                    has:
+                      kind: property_identifier
+                      regex: ^cause$

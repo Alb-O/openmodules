@@ -1,0 +1,28 @@
+id: prefer-bun-glob
+language: typescript
+severity: warning
+message: "Prefer Bun.Glob for file globbing. Use new Bun.Glob(pattern) instead."
+note: |
+  Bun.Glob is a native implementation that's faster than npm glob packages.
+  
+  Instead of:
+    import { glob } from 'glob';
+    const files = await glob('**/*.ts');
+  
+  Use:
+    const glob = new Bun.Glob('**/*.ts');
+    for await (const file of glob.scan('.')) { }
+rule:
+  any:
+    - pattern: import { $$$IMPORTS } from 'glob'
+    - pattern: import { $$$IMPORTS } from "glob"
+    - pattern: import $NAME from 'glob'
+    - pattern: import $NAME from "glob"
+    - pattern: import { $$$IMPORTS } from 'fast-glob'
+    - pattern: import { $$$IMPORTS } from "fast-glob"
+    - pattern: import $NAME from 'fast-glob'
+    - pattern: import $NAME from "fast-glob"
+    - pattern: import { $$$IMPORTS } from 'globby'
+    - pattern: import { $$$IMPORTS } from "globby"
+    - pattern: import $NAME from 'globby'
+    - pattern: import $NAME from "globby"

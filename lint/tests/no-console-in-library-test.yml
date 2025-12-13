@@ -1,0 +1,11 @@
+id: no-console-in-library
+valid:
+  - "throw new Error('something went wrong')"
+  - "log.debug('processing file')"
+  - "logger.info('completed')"
+invalid:
+  - "console.log('debug info')"
+  - "console.warn('warning message')"
+  - "console.error('error occurred')"
+  - "console.info('info message')"
+  - "console.debug('debug message')"

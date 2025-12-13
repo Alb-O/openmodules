@@ -1,6 +1,6 @@
 import { command, positional, string, flag } from "cmd-ts";
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import pc from "picocolors";
 import { findProjectRoot, getModulePaths } from "../utils";

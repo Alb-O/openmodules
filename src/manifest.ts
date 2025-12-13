@@ -1,5 +1,5 @@
 import * as TOML from "@iarna/toml";
-import { basename, dirname, join, relative, sep } from "path";
+import { basename, dirname, join, relative, sep } from "node:path";
 import { z } from "zod";
 import type { Engram, TriggerConfig } from "./types";
 import { logWarning, logError } from "./logging";

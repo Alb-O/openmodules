@@ -1,0 +1,10 @@
+id: no-process-exit-in-library
+valid:
+  - "throw new Error('fatal error')"
+  - "return { success: false, error }"
+  - "process.exitCode = 1"
+invalid:
+  - "process.exit(1)"
+  - "process.exit(0)"
+  - "process.exit()"
+  - "if (error) process.exit(1)"

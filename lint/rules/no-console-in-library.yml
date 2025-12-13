@@ -1,0 +1,24 @@
+id: no-console-in-library
+language: typescript
+severity: warning
+message: "Avoid console.* in library code. Use a logging module or throw errors instead."
+note: |
+  Library code should not use console.* directly.
+  CLI code (src/cli/) is exempt since it's user-facing.
+  
+  Instead of:
+    console.log('debug info');
+  
+  Throw an error or use a logging module.
+files:
+  - src/**/*.ts
+ignores:
+  - src/cli/**/*
+  - src/logging.ts
+rule:
+  any:
+    - pattern: console.log($$$ARGS)
+    - pattern: console.warn($$$ARGS)
+    - pattern: console.error($$$ARGS)
+    - pattern: console.info($$$ARGS)
+    - pattern: console.debug($$$ARGS)
