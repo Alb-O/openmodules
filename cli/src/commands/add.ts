@@ -14,7 +14,7 @@ import { submoduleAddFromCache, cloneFromCache, isCached } from "../cache";
 
 export const add = command({
   name: "add",
-  description: "Add an openmodule from a git repository",
+  description: "Add an engram from a git repository",
   args: {
     repo: positional({
       type: string,

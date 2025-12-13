@@ -18,13 +18,13 @@ export { getBundledPluginPath, installPlugin } from "./plugins";
 
 /**
  * Get the base cache directory.
- * Uses $XDG_CACHE_HOME/openmodules or ~/.cache/openmodules
+ * Uses $XDG_CACHE_HOME/engrams or ~/.cache/engrams
  */
 export function getCacheDir(): string {
   const xdgCacheHome = process.env.XDG_CACHE_HOME;
   return xdgCacheHome
-    ? path.join(xdgCacheHome, "openmodules")
-    : path.join(os.homedir(), ".cache", "openmodules");
+    ? path.join(xdgCacheHome, "engrams")
+    : path.join(os.homedir(), ".cache", "engrams");
 }
 
 /**

@@ -6,7 +6,7 @@ import type { Module } from "./types";
 import { logWarning, logError } from "./logging";
 
 /** Manifest filename at module root */
-export const MANIFEST_FILENAME = "openmodule.toml";
+export const MANIFEST_FILENAME = "engram.toml";
 /** Default prompt file relative to module root */
 const DEFAULT_PROMPT_PATH = "README.md";
 
@@ -55,9 +55,9 @@ function logManifestErrors(
 export function generateToolName(modulePath: string, baseDir?: string): string {
   if (typeof modulePath !== "string" || modulePath.length === 0) {
     logWarning(
-      "Received invalid module path while generating tool name; defaulting to openmodule_unknown.",
+      "Received invalid module path while generating tool name; defaulting to engram_unknown.",
     );
-    return "openmodule_unknown";
+    return "engram_unknown";
   }
 
   const safeBase =
@@ -69,16 +69,16 @@ export function generateToolName(modulePath: string, baseDir?: string): string {
 
   if (dirPath === "." || dirPath === "") {
     const folder = basename(dirname(modulePath));
-    return `openmodule_${folder.replace(/-/g, "_")}`;
+    return `engram_${folder.replace(/-/g, "_")}`;
   }
 
   const components = dirPath.split(sep).filter((part) => part !== ".");
-  return `openmodule_${components.join("_").replace(/-/g, "_")}`;
+  return `engram_${components.join("_").replace(/-/g, "_")}`;
 }
 
 /**
  * Parses a module from its manifest file.
- * @param manifestPath - Path to the openmodule.toml file
+ * @param manifestPath - Path to the engram.toml file
  * @param baseDir - Base directory for generating tool names
  */
 export async function parseModule(

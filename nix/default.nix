@@ -6,7 +6,7 @@
 }:
 
 bun2nix.mkDerivation {
-  pname = "openmodules";
+  pname = "engrams";
   version = "1.0.0";
   src = src;
   bunDeps = bun2nix.fetchBunDeps {
@@ -15,7 +15,7 @@ bun2nix.mkDerivation {
   bunBuildFlags = [
     "./src/index.ts"
     "--outfile"
-    "./dist/openmodules.bundle.js"
+    "./dist/engrams.bundle.js"
     "--target"
     "node"
     "--minify"
@@ -27,7 +27,7 @@ bun2nix.mkDerivation {
   installPhase = ''
     runHook preInstall
     mkdir -p $out
-    cp dist/openmodules.bundle.js $out/openmodules.min.js
+    cp dist/engrams.bundle.js $out/engrams.min.js
     runHook postInstall
   '';
 }

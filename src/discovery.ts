@@ -6,7 +6,7 @@ import { logWarning } from "./logging";
 import { MANIFEST_FILENAME, parseModule } from "./manifest";
 
 /**
- * Finds all openmodule.toml files within a base path.
+ * Finds all engram.toml files within a base path.
  * Returns paths to manifest files.
  */
 export async function findModuleFiles(basePath: string): Promise<string[]> {
@@ -219,8 +219,8 @@ export async function discoverModules(basePaths: unknown): Promise<Module[]> {
 export function getDefaultModulePaths(rootDir: string): string[] {
   const xdgConfigHome = process.env.XDG_CONFIG_HOME;
   const globalModulesPath = xdgConfigHome
-    ? join(xdgConfigHome, "openmodules")
-    : join(os.homedir(), ".config", "openmodules");
+    ? join(xdgConfigHome, "engrams")
+    : join(os.homedir(), ".config", "engrams");
 
-  return [globalModulesPath, join(rootDir, ".openmodules")];
+  return [globalModulesPath, join(rootDir, ".engrams")];
 }

@@ -207,8 +207,8 @@ const ModulesPlugin: Plugin = async (input) => {
         const message: any = output.message;
         const toolsConfig = { ...(message.tools ?? {}) };
 
-        // Default to hidden for all OpenModule tools unless explicitly re-enabled below
-        toolsConfig["openmodule_*"] = toolsConfig["openmodule_*"] ?? false;
+        // Default to hidden for all Engram tools unless explicitly re-enabled below
+        toolsConfig["engram_*"] = toolsConfig["engram_*"] ?? false;
         for (const toolName of Object.keys(tools)) {
           toolsConfig[toolName] = false;
         }

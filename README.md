@@ -1,45 +1,45 @@
-# openmodules
+# engrams
 
-Discovers modules and exposes each as a tool named `openmodule_<name>`. The plugin scans two locations in priority order: `$XDG_CONFIG_HOME/openmodules` (or `~/.config/openmodules`) for global modules, and `<project>/.openmodules/` for project-local modules. Later paths override earlier ones when tool names collide.
+Discovers modules and exposes each as a tool named `engram_<name>`. The plugin scans two locations in priority order: `$XDG_CONFIG_HOME/engrams` (or `~/.config/engrams`) for global modules, and `<project>/.engrams/` for project-local modules. Later paths override earlier ones when tool names collide.
 
 When a module tool is invoked, the plugin injects the module content into the session. It also generates a flat listing of absolute file paths within the module directory, making scripts directly executable without path confusion.
 
 ## Design Philosophy
 
-Each openmodule is a standalone git repository. This enables:
+Each engram is a standalone git repository. This enables:
 
 - Version control and history for each module
 - Easy sharing via `git clone` or `git submodule add`
 - Independent versioning and updates
 
-**Naming convention**: We recommend prefixing repository names with `om.` for organizational and filtering purposes (e.g., `om.database-tools`, `om.deploy-scripts`).
+**Naming convention**: We recommend prefixing repository names with `eg.` for organizational and filtering purposes (e.g., `eg.database-tools`, `eg.deploy-scripts`).
 
 ## Installation
 
 ### As a project-local module
 
 ```bash
-# Clone directly into your project's .openmodules directory
-git clone https://github.com/user/om.my-module .openmodules/my-module
+# Clone directly into your project's .engrams directory
+git clone https://github.com/user/om.my-module .engrams/my-module
 
 # Or add as a submodule for version tracking
-git submodule add https://github.com/user/om.my-module .openmodules/my-module
+git submodule add https://github.com/user/om.my-module .engrams/my-module
 ```
 
 ### As a global module
 
 ```bash
 # Clone into your global modules directory
-git clone https://github.com/user/om.my-module ~/.config/openmodules/my-module
+git clone https://github.com/user/om.my-module ~/.config/engrams/my-module
 ```
 
 ## Module Structure
 
-Each module is a directory containing an `openmodule.toml` manifest:
+Each module is a directory containing an `engram.toml` manifest:
 
 ```
 my-module/
-├── openmodule.toml         # Required - module manifest
+├── engram.toml         # Required - module manifest
 ├── README.md               # Default prompt file (injected into agent context)
 ├── .ignore                 # Optional - gitignore-style file filtering
 └── scripts/
@@ -47,7 +47,7 @@ my-module/
     └── backup.sh           # Scripts, tools, references, etc.
 ```
 
-### `openmodule.toml`
+### `engram.toml`
 
 The module manifest:
 
@@ -123,9 +123,9 @@ Directories use a `.oneliner` or `.oneliner.txt` file containing raw description
 The resulting file list appears in the agent context as:
 
 ```
-/home/user/.config/openmodules/my-module/scripts/  # Shell scripts for automation
-/home/user/.config/openmodules/my-module/scripts/backup.sh  # Database backup utilities
-/home/user/.config/openmodules/my-module/data/config.json
+/home/user/.config/engrams/my-module/scripts/  # Shell scripts for automation
+/home/user/.config/engrams/my-module/scripts/backup.sh  # Database backup utilities
+/home/user/.config/engrams/my-module/data/config.json
 ```
 
 ## Filtering Files
@@ -140,18 +140,18 @@ node_modules/
 !important.log
 ```
 
-The `openmodule.toml`, `.ignore`, and `.oneliner` files are excluded from listings by default.
+The `engram.toml`, `.ignore`, and `.oneliner` files are excluded from listings by default.
 
 ## Nested Modules
 
-Modules can contain other modules by placing `openmodule.toml` files in subdirectories. The directory hierarchy defines the logical organization—no additional configuration is needed.
+Modules can contain other modules by placing `engram.toml` files in subdirectories. The directory hierarchy defines the logical organization—no additional configuration is needed.
 
 ```
 parent-module/
-├── openmodule.toml           # Parent module
+├── engram.toml           # Parent module
 ├── README.md
 └── child-module/
-    ├── openmodule.toml       # Nested child module
+    ├── engram.toml       # Nested child module
     └── README.md
 ```
 
@@ -169,21 +169,21 @@ This prevents child modules from appearing in isolation without their parent con
 
 Nested modules get tool names that reflect their full path:
 
-- `parent-module/openmodule.toml` → `openmodule_parent_module`
-- `parent-module/child-module/openmodule.toml` → `openmodule_parent_module_child_module`
-- `parent-module/child-module/grandchild/openmodule.toml` → `openmodule_parent_module_child_module_grandchild`
+- `parent-module/engram.toml` → `engram_parent_module`
+- `parent-module/child-module/engram.toml` → `engram_parent_module_child_module`
+- `parent-module/child-module/grandchild/engram.toml` → `engram_parent_module_child_module_grandchild`
 
 ### Example: Layered Documentation
 
 ```
 docs/
-├── openmodule.toml           # triggers: ["documentation", "docs"]
+├── engram.toml           # triggers: ["documentation", "docs"]
 ├── README.md                 # General documentation guidelines
 ├── api/
-│   ├── openmodule.toml       # triggers: ["api", "endpoint"]
+│   ├── engram.toml       # triggers: ["api", "endpoint"]
 │   └── README.md             # API documentation specifics
 └── tutorials/
-    ├── openmodule.toml       # triggers: ["tutorial", "guide"]
+    ├── engram.toml       # triggers: ["tutorial", "guide"]
     └── README.md             # Tutorial writing guidelines
 ```
 

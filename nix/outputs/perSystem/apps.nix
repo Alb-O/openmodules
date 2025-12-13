@@ -3,8 +3,8 @@
   ...
 }:
 {
-  openmodule = {
+  engram = {
     type = "app";
-    program = "${self'.packages.openmodule}/bin/openmodule";
+    program = "${self'.packages.engram}/bin/engram";
   };
 }

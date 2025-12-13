@@ -18,8 +18,8 @@ describe("manifest", () => {
   });
 
   describe("parseModule", () => {
-    it("parses a valid module with openmodule.toml and generates a tool name", async () => {
-      const baseDir = path.join(tempDir, ".openmodules");
+    it("parses a valid module with engram.toml and generates a tool name", async () => {
+      const baseDir = path.join(tempDir, ".engrams");
       const moduleDir = path.join(baseDir, "demo-module");
       const manifestPath = await createModule(moduleDir, "demo-module");
 
@@ -27,64 +27,64 @@ describe("manifest", () => {
 
       expect(parsed?.name).toBe("demo-module");
       expect(parsed?.directory).toBe(moduleDir);
-      expect(parsed?.toolName).toBe("openmodule_demo_module");
+      expect(parsed?.toolName).toBe("engram_demo_module");
       expect(parsed?.content).toContain("Body of the module.");
     });
   });
 
   describe("generateToolName", () => {
     it("generates tool names by flattening directories with underscores", () => {
-      const baseDir = path.join(tempDir, ".openmodules");
+      const baseDir = path.join(tempDir, ".engrams");
       const manifestPath = path.join(
         baseDir,
         "docs",
         "api-guides",
-        "openmodule.toml",
+        "engram.toml",
       );
       const toolName = generateToolName(manifestPath, baseDir);
 
-      expect(toolName).toBe("openmodule_docs_api_guides");
+      expect(toolName).toBe("engram_docs_api_guides");
     });
 
     it("handles missing baseDir when generating tool names", () => {
-      const baseDir = path.join(tempDir, ".openmodules");
-      const manifestPath = path.join(baseDir, "solo", "openmodule.toml");
+      const baseDir = path.join(tempDir, ".engrams");
+      const manifestPath = path.join(baseDir, "solo", "engram.toml");
       const toolName = generateToolName(manifestPath);
 
-      expect(toolName).toBe("openmodule_solo");
+      expect(toolName).toBe("engram_solo");
     });
 
     it("returns fallback tool name when modulePath is invalid", () => {
       const toolName = generateToolName(undefined as unknown as string);
-      expect(toolName).toBe("openmodule_unknown");
+      expect(toolName).toBe("engram_unknown");
     });
 
     it("generates correct tool names for nested modules", () => {
-      const baseDir = path.join(tempDir, ".openmodules");
+      const baseDir = path.join(tempDir, ".engrams");
 
-      const parentPath = path.join(baseDir, "parent-mod", "openmodule.toml");
+      const parentPath = path.join(baseDir, "parent-mod", "engram.toml");
       const childPath = path.join(
         baseDir,
         "parent-mod",
         "child-mod",
-        "openmodule.toml",
+        "engram.toml",
       );
       const grandchildPath = path.join(
         baseDir,
         "parent-mod",
         "child-mod",
         "grandchild-mod",
-        "openmodule.toml",
+        "engram.toml",
       );
 
       expect(generateToolName(parentPath, baseDir)).toBe(
-        "openmodule_parent_mod",
+        "engram_parent_mod",
       );
       expect(generateToolName(childPath, baseDir)).toBe(
-        "openmodule_parent_mod_child_mod",
+        "engram_parent_mod_child_mod",
       );
       expect(generateToolName(grandchildPath, baseDir)).toBe(
-        "openmodule_parent_mod_child_mod_grandchild_mod",
+        "engram_parent_mod_child_mod_grandchild_mod",
       );
     });
   });

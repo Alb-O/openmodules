@@ -1,10 +1,10 @@
 {
-  "name": "openmodule",
+  "name": "engram",
   "version": "0.1.0",
-  "description": "CLI tool for managing openmodules",
+  "description": "CLI tool for managing engrams",
   "type": "module",
   "bin": {
-    "openmodule": "./dist/index.js"
+    "engram": "./dist/index.js"
   },
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target node",

@@ -1,9 +1,9 @@
-[submodule ".openmodules/affinity-extractor"]
-	path = .openmodules/affinity-extractor
-	url = https://github.com/Alb-O/om.affinity-extractor.git
-[submodule ".openmodules/example-module"]
-	path = .openmodules/example-module
-	url = https://github.com/Alb-O/om.example-module.git
-[submodule ".openmodules/doc-style"]
-	path = .openmodules/doc-style
-	url = https://github.com/Alb-O/om.doc-style.git
+[submodule ".engrams/affinity-extractor"]
+	path = .engrams/affinity-extractor
+	url = https://github.com/Alb-O/eg.affinity-extractor.git
+[submodule ".engrams/example-module"]
+	path = .engrams/example-module
+	url = https://github.com/Alb-O/eg.example-module.git
+[submodule ".engrams/doc-style"]
+	path = .engrams/doc-style
+	url = https://github.com/Alb-O/eg.doc-style.git

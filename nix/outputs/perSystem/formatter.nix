@@ -23,7 +23,7 @@
         "**/node_modules/*"
         "bun.lock"
         "**/bun.lock"
-        ".openmodules/*"
+        ".engrams/*"
       ];
     };
 }

@@ -7,7 +7,7 @@ import { getModulePaths, findProjectRoot } from "../utils";
 
 export const remove = command({
   name: "remove",
-  description: "Remove an installed openmodule",
+  description: "Remove an installed engram",
   args: {
     name: positional({
       type: { from: async (s) => s },

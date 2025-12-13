@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 /**
- * Generates a minimal openmodule.toml manifest content.
+ * Generates a minimal engram.toml manifest content.
  */
 export function moduleManifest(
   name: string,
@@ -22,7 +22,7 @@ export function modulePrompt(content = "Body of the module.") {
 }
 
 /**
- * Creates a module with openmodule.toml at the given directory.
+ * Creates a module with engram.toml at the given directory.
  * Returns the path to the manifest file.
  */
 export async function createModule(
@@ -33,12 +33,12 @@ export async function createModule(
 ): Promise<string> {
   await fs.mkdir(moduleDir, { recursive: true });
   await fs.writeFile(
-    path.join(moduleDir, "openmodule.toml"),
+    path.join(moduleDir, "engram.toml"),
     moduleManifest(name, description),
   );
   await fs.writeFile(
     path.join(moduleDir, "README.md"),
     modulePrompt(promptContent),
   );
-  return path.join(moduleDir, "openmodule.toml");
+  return path.join(moduleDir, "engram.toml");
 }

@@ -19,7 +19,7 @@ describe("discovery", () => {
 
   describe("findModuleFiles", () => {
     it("follows symlinked module directories", async () => {
-      const baseDir = path.join(tempDir, ".openmodules");
+      const baseDir = path.join(tempDir, ".engrams");
       const realModuleDir = path.join(tempDir, "real-module");
       await createModule(realModuleDir, "linked-module");
 
@@ -28,7 +28,7 @@ describe("discovery", () => {
       await fs.symlink(realModuleDir, linkPath, "dir");
 
       const files = await findModuleFiles(baseDir);
-      expect(files).toContain(path.join(linkPath, "openmodule.toml"));
+      expect(files).toContain(path.join(linkPath, "engram.toml"));
     });
   });
 
@@ -57,7 +57,7 @@ describe("discovery", () => {
 
   describe("nested modules", () => {
     it("discovers nested modules and establishes parent-child relationships", async () => {
-      const baseDir = path.join(tempDir, ".openmodules");
+      const baseDir = path.join(tempDir, ".engrams");
       const parentDir = path.join(baseDir, "parent-module");
       const childDir = path.join(parentDir, "child-module");
 
@@ -85,7 +85,7 @@ describe("discovery", () => {
     });
 
     it("handles deeply nested modules correctly", async () => {
-      const baseDir = path.join(tempDir, ".openmodules");
+      const baseDir = path.join(tempDir, ".engrams");
       const level1 = path.join(baseDir, "level1");
       const level2 = path.join(level1, "level2");
       const level3 = path.join(level2, "level3");
@@ -112,7 +112,7 @@ describe("discovery", () => {
     });
 
     it("does not set parent relationship for sibling modules", async () => {
-      const baseDir = path.join(tempDir, ".openmodules");
+      const baseDir = path.join(tempDir, ".engrams");
       const sibling1 = path.join(baseDir, "sibling1");
       const sibling2 = path.join(baseDir, "sibling2");
 
@@ -136,7 +136,7 @@ describe("discovery", () => {
     });
 
     it("handles multiple children under one parent", async () => {
-      const baseDir = path.join(tempDir, ".openmodules");
+      const baseDir = path.join(tempDir, ".engrams");
       const parentDir = path.join(baseDir, "parent");
       const child1Dir = path.join(parentDir, "child1");
       const child2Dir = path.join(parentDir, "child2");
@@ -162,9 +162,9 @@ describe("discovery", () => {
     });
 
     it("sets only the closest ancestor as parent when intermediate directory has no manifest", async () => {
-      const baseDir = path.join(tempDir, ".openmodules");
+      const baseDir = path.join(tempDir, ".engrams");
       const parentDir = path.join(baseDir, "parent");
-      // intermediate-dir has no openmodule.toml
+      // intermediate-dir has no engram.toml
       const intermediateDir = path.join(parentDir, "intermediate");
       const grandchildDir = path.join(intermediateDir, "grandchild");
 

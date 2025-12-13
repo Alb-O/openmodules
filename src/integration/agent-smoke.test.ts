@@ -1,5 +1,5 @@
 /**
- * Agent smoke test for openmodules plugin using a synthetic module set.
+ * Agent smoke test for engrams plugin using a synthetic module set.
  * Requires opencode CLI, free model opencode/big-pickle, and RUN_AGENT_SMOKE=true.
  */
 import { describe, it, expect } from "bun:test";
@@ -67,7 +67,7 @@ async function createModule(
   manifestLines.push("");
 
   await fs.writeFile(
-    path.join(moduleDir, "openmodule.toml"),
+    path.join(moduleDir, "engram.toml"),
     manifestLines.join("\n"),
   );
   await fs.writeFile(path.join(moduleDir, "README.md"), readme);
@@ -75,13 +75,13 @@ async function createModule(
 
 async function setupTestDir(): Promise<TestContext> {
   const testDir = await fs.mkdtemp(
-    path.join(os.tmpdir(), "openmodules-smoke-"),
+    path.join(os.tmpdir(), "engrams-smoke-"),
   );
   const opencodeDir = path.join(testDir, ".opencode");
   const pluginDir = path.join(opencodeDir, "plugin");
   const repoRoot = path.resolve(import.meta.dir, "..", "..");
-  const pluginBundle = path.join(repoRoot, "dist", "openmodules.bundle.js");
-  const pluginPath = path.join(pluginDir, "openmodules.min.js");
+  const pluginBundle = path.join(repoRoot, "dist", "engrams.bundle.js");
+  const pluginPath = path.join(pluginDir, "engrams.min.js");
 
   await fs.mkdir(pluginDir, { recursive: true });
 
@@ -101,7 +101,7 @@ async function setupTestDir(): Promise<TestContext> {
   );
 
   // Synthetic module set
-  const modulesRoot = path.join(testDir, ".openmodules");
+  const modulesRoot = path.join(testDir, ".engrams");
   await createModule(
     modulesRoot,
     "always-on",
@@ -160,7 +160,7 @@ async function runOpencode(
   return { stdout, stderr, exitCode };
 }
 
-describe.skipIf(!shouldRun)("openmodules agent smoke", () => {
+describe.skipIf(!shouldRun)("engrams agent smoke", () => {
   it(
     "hides triggered modules until a trigger phrase appears",
     async () => {
@@ -169,32 +169,32 @@ describe.skipIf(!shouldRun)("openmodules agent smoke", () => {
       try {
         const first = await runOpencode(
           ctx.testDir,
-          "Reply only with the openmodule_ tools you can see right now.",
+          "Reply only with the engram_ tools you can see right now.",
         );
 
         expect(first.exitCode, first.stderr || first.stdout).toBe(0);
-        expect(first.stdout).toContain("openmodule_always_on");
-        expect(first.stdout).not.toContain("openmodule_doc_style");
-        expect(first.stdout).not.toContain("openmodule_assets");
+        expect(first.stdout).toContain("engram_always_on");
+        expect(first.stdout).not.toContain("engram_doc_style");
+        expect(first.stdout).not.toContain("engram_assets");
 
         const second = await runOpencode(
           ctx.testDir,
-          "I need documentation and docstrings. Reply only with the openmodule_ tools you can see.",
+          "I need documentation and docstrings. Reply only with the engram_ tools you can see.",
         );
 
         expect(second.exitCode, second.stderr || second.stdout).toBe(0);
-        expect(second.stdout).toContain("openmodule_always_on");
-        expect(second.stdout).toContain("openmodule_doc_style");
-        expect(second.stdout).not.toContain("openmodule_assets");
+        expect(second.stdout).toContain("engram_always_on");
+        expect(second.stdout).toContain("engram_doc_style");
+        expect(second.stdout).not.toContain("engram_assets");
 
         const third = await runOpencode(
           ctx.testDir,
-          "I have some .pdf files to process. Reply only with the openmodule_ tools you can see.",
+          "I have some .pdf files to process. Reply only with the engram_ tools you can see.",
         );
 
         expect(third.exitCode, third.stderr || third.stdout).toBe(0);
-        expect(third.stdout).toContain("openmodule_always_on");
-        expect(third.stdout).toContain("openmodule_assets");
+        expect(third.stdout).toContain("engram_always_on");
+        expect(third.stdout).toContain("engram_assets");
       } finally {
         await cleanup(ctx);
       }

@@ -7,8 +7,8 @@ import { cache } from "./commands/cache";
 import { init } from "./commands/init";
 
 const app = subcommands({
-  name: "openmodule",
-  description: "CLI tool for managing openmodules",
+  name: "engram",
+  description: "CLI tool for managing engrams",
   version: "0.1.0",
   cmds: {
     init,

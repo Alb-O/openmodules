@@ -13,11 +13,11 @@ export function getBundledPluginPath(): string | null {
   const cwd = process.cwd();
 
   const possiblePaths = [
-    path.join(execDir, "..", "share", "openmodules", "openmodules.min.js"), // from Nix/installed binary
-    path.join(__dirname, "..", "dist", "openmodules.bundle.js"), // from built cli dist/
-    path.join(__dirname, "..", "..", "..", "dist", "openmodules.bundle.js"), // from cli/src/cache/
-    path.join(cwd, "dist", "openmodules.bundle.js"), // local build in checkout
-    path.join(cwd, "openmodules.bundle.js"), // fallback if build was output alongside CWD
+    path.join(execDir, "..", "share", "engrams", "engrams.min.js"), // from Nix/installed binary
+    path.join(__dirname, "..", "dist", "engrams.bundle.js"), // from built cli dist/
+    path.join(__dirname, "..", "..", "..", "dist", "engrams.bundle.js"), // from cli/src/cache/
+    path.join(cwd, "dist", "engrams.bundle.js"), // local build in checkout
+    path.join(cwd, "engrams.bundle.js"), // fallback if build was output alongside CWD
   ];
 
   for (const p of possiblePaths) {
@@ -45,7 +45,7 @@ export function installPlugin(
 
   const bundledContent = fs.readFileSync(bundledPath);
   const pluginsDir = path.join(targetDir, ".opencode", "plugin");
-  const pluginPath = path.join(pluginsDir, "openmodules.min.js");
+  const pluginPath = path.join(pluginsDir, "engrams.min.js");
 
   // Reinstall when the bundled plugin differs, or when --force is used
   const exists = fs.existsSync(pluginPath);

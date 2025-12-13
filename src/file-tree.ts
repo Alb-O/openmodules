@@ -7,7 +7,7 @@ import { extractOneliner } from "./comment-parser";
 
 // Hide these files/directories by default. The manifest is already parsed, agent doesn't need to see it.
 const DEFAULT_EXCLUDE_PATTERNS = [
-  /^openmodule\.toml$/,
+  /^engram\.toml$/,
   /^\.ignore$/,
   /^\.oneliner(\.txt)?$/,
   /\.git/,

@@ -19,21 +19,21 @@
     in
     {
       # Plugin bundle (minified JS)
-      openmodules-bundle = pkgs.callPackage (rootSrc + /nix) {
+      engrams-bundle = pkgs.callPackage (rootSrc + /nix) {
         bun2nix = bun2nixPkg;
         src = rootSrc;
         bunNix = rootSrc + /nix/bun.nix;
       };
 
       # CLI that depends on the bundled plugin
-      openmodule = pkgs.callPackage (rootSrc + /cli/nix) {
+      engram = pkgs.callPackage (rootSrc + /cli/nix) {
         bun2nix = bun2nixPkg;
         src = rootSrc + /cli;
         bunNix = rootSrc + /cli/nix/bun.nix;
-        pluginBundle = self'.packages.openmodules-bundle;
+        pluginBundle = self'.packages.engrams-bundle;
       };
 
       # Default package should be the CLI, not the raw bundle
-      default = self'.packages.openmodule;
+      default = self'.packages.engram;
     };
 }

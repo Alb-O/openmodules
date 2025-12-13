@@ -31,19 +31,19 @@ describe("triggers", () => {
         {
           name: "Docs",
           directory: "/tmp/docs",
-          toolName: "openmodule_docs",
+          toolName: "engram_docs",
           description: "Docs",
           content: "docs",
-          manifestPath: "/tmp/docs/openmodule.toml",
+          manifestPath: "/tmp/docs/engram.toml",
           triggers: { userMsg: ["docstring{s,}"] },
         },
         {
           name: "AlwaysOn",
           directory: "/tmp/always",
-          toolName: "openmodule_always",
+          toolName: "engram_always",
           description: "Always on",
           content: "always",
-          manifestPath: "/tmp/always/openmodule.toml",
+          manifestPath: "/tmp/always/engram.toml",
         },
       ];
 
@@ -51,7 +51,7 @@ describe("triggers", () => {
       const alwaysVisible = matchers
         .filter((matcher) => matcher.alwaysVisible)
         .map((matcher) => matcher.toolName);
-      expect(alwaysVisible).toContain("openmodule_always");
+      expect(alwaysVisible).toContain("engram_always");
 
       const text = "Need docstrings for this module";
       const triggered = matchers
@@ -60,7 +60,7 @@ describe("triggers", () => {
         )
         .map((matcher) => matcher.toolName);
 
-      expect(triggered).toContain("openmodule_docs");
+      expect(triggered).toContain("engram_docs");
     });
 
     it("builds matchers with separate regex arrays for each trigger type", () => {
@@ -68,28 +68,28 @@ describe("triggers", () => {
         {
           name: "FileDetector",
           directory: "/tmp/file-detector",
-          toolName: "openmodule_file_detector",
+          toolName: "engram_file_detector",
           description: "Detects file types from any message",
           content: "detector",
-          manifestPath: "/tmp/file-detector/openmodule.toml",
+          manifestPath: "/tmp/file-detector/engram.toml",
           triggers: { anyMsg: [".pdf", "pdf file"] },
         },
         {
           name: "UserOnly",
           directory: "/tmp/user-only",
-          toolName: "openmodule_user_only",
+          toolName: "engram_user_only",
           description: "Only triggers on user messages",
           content: "user only",
-          manifestPath: "/tmp/user-only/openmodule.toml",
+          manifestPath: "/tmp/user-only/engram.toml",
           triggers: { userMsg: ["help me"] },
         },
         {
           name: "AgentOnly",
           directory: "/tmp/agent-only",
-          toolName: "openmodule_agent_only",
+          toolName: "engram_agent_only",
           description: "Only triggers on agent messages",
           content: "agent only",
-          manifestPath: "/tmp/agent-only/openmodule.toml",
+          manifestPath: "/tmp/agent-only/engram.toml",
           triggers: { agentMsg: ["found error"] },
         },
       ];
@@ -97,13 +97,13 @@ describe("triggers", () => {
       const matchers = buildContextTriggerMatchers(modules);
 
       const fileDetector = matchers.find(
-        (m) => m.toolName === "openmodule_file_detector",
+        (m) => m.toolName === "engram_file_detector",
       );
       const userOnly = matchers.find(
-        (m) => m.toolName === "openmodule_user_only",
+        (m) => m.toolName === "engram_user_only",
       );
       const agentOnly = matchers.find(
-        (m) => m.toolName === "openmodule_agent_only",
+        (m) => m.toolName === "engram_agent_only",
       );
 
       expect(fileDetector?.anyMsgRegexes.length).toBeGreaterThan(0);
@@ -124,28 +124,28 @@ describe("triggers", () => {
         {
           name: "AnyMsg",
           directory: "/tmp/any-msg",
-          toolName: "openmodule_any_msg",
+          toolName: "engram_any_msg",
           description: "Triggers on any message",
           content: "any msg",
-          manifestPath: "/tmp/any-msg/openmodule.toml",
+          manifestPath: "/tmp/any-msg/engram.toml",
           triggers: { anyMsg: ["detected pattern"] },
         },
         {
           name: "UserOnly",
           directory: "/tmp/user-only",
-          toolName: "openmodule_user_only",
+          toolName: "engram_user_only",
           description: "Only triggers on user messages",
           content: "user only",
-          manifestPath: "/tmp/user-only/openmodule.toml",
+          manifestPath: "/tmp/user-only/engram.toml",
           triggers: { userMsg: ["detected pattern"] },
         },
         {
           name: "AgentOnly",
           directory: "/tmp/agent-only",
-          toolName: "openmodule_agent_only",
+          toolName: "engram_agent_only",
           description: "Only triggers on agent messages",
           content: "agent only",
-          manifestPath: "/tmp/agent-only/openmodule.toml",
+          manifestPath: "/tmp/agent-only/engram.toml",
           triggers: { agentMsg: ["detected pattern"] },
         },
       ];
@@ -195,11 +195,11 @@ describe("triggers", () => {
       }
 
       // any-msg should trigger (pattern is in allText)
-      expect(triggered.has("openmodule_any_msg")).toBe(true);
+      expect(triggered.has("engram_any_msg")).toBe(true);
       // user-only should NOT trigger (pattern is not in userText)
-      expect(triggered.has("openmodule_user_only")).toBe(false);
+      expect(triggered.has("engram_user_only")).toBe(false);
       // agent-only should trigger (pattern is in agentText)
-      expect(triggered.has("openmodule_agent_only")).toBe(true);
+      expect(triggered.has("engram_agent_only")).toBe(true);
     });
 
     it("user-msg triggers match when pattern is in user text", () => {
@@ -207,28 +207,28 @@ describe("triggers", () => {
         {
           name: "AnyMsg",
           directory: "/tmp/any-msg",
-          toolName: "openmodule_any_msg",
+          toolName: "engram_any_msg",
           description: "Triggers on any message",
           content: "any msg",
-          manifestPath: "/tmp/any-msg/openmodule.toml",
+          manifestPath: "/tmp/any-msg/engram.toml",
           triggers: { anyMsg: ["user phrase"] },
         },
         {
           name: "UserOnly",
           directory: "/tmp/user-only",
-          toolName: "openmodule_user_only",
+          toolName: "engram_user_only",
           description: "Only triggers on user messages",
           content: "user only",
-          manifestPath: "/tmp/user-only/openmodule.toml",
+          manifestPath: "/tmp/user-only/engram.toml",
           triggers: { userMsg: ["user phrase"] },
         },
         {
           name: "AgentOnly",
           directory: "/tmp/agent-only",
-          toolName: "openmodule_agent_only",
+          toolName: "engram_agent_only",
           description: "Only triggers on agent messages",
           content: "agent only",
-          manifestPath: "/tmp/agent-only/openmodule.toml",
+          manifestPath: "/tmp/agent-only/engram.toml",
           triggers: { agentMsg: ["user phrase"] },
         },
       ];
@@ -274,10 +274,10 @@ describe("triggers", () => {
       }
 
       // any-msg and user-only should trigger
-      expect(triggered.has("openmodule_any_msg")).toBe(true);
-      expect(triggered.has("openmodule_user_only")).toBe(true);
+      expect(triggered.has("engram_any_msg")).toBe(true);
+      expect(triggered.has("engram_user_only")).toBe(true);
       // agent-only should NOT trigger (pattern is not in agent text)
-      expect(triggered.has("openmodule_agent_only")).toBe(false);
+      expect(triggered.has("engram_agent_only")).toBe(false);
     });
   });
 });

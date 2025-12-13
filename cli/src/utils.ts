@@ -9,12 +9,12 @@ export interface ModulePaths {
 export function getModulePaths(projectRoot?: string): ModulePaths {
   const xdgConfigHome = process.env.XDG_CONFIG_HOME;
   const globalPath = xdgConfigHome
-    ? path.join(xdgConfigHome, "openmodules")
-    : path.join(os.homedir(), ".config", "openmodules");
+    ? path.join(xdgConfigHome, "engrams")
+    : path.join(os.homedir(), ".config", "engrams");
 
   return {
     global: globalPath,
-    local: projectRoot ? path.join(projectRoot, ".openmodules") : null,
+    local: projectRoot ? path.join(projectRoot, ".engrams") : null,
   };
 }
 
@@ -23,7 +23,7 @@ export function findProjectRoot(): string | null {
   while (dir !== path.dirname(dir)) {
     // Check for common project indicators
     const gitDir = path.join(dir, ".git");
-    const openmodulesDir = path.join(dir, ".openmodules");
+    const openmodulesDir = path.join(dir, ".engrams");
     try {
       const fs = require("fs");
       if (fs.existsSync(gitDir) || fs.existsSync(openmodulesDir)) {
@@ -102,6 +102,6 @@ export function getSupportedDomains(): string[] {
 }
 
 export function getModuleName(repo: string): string {
-  // Strip om. prefix if present for cleaner module names
-  return repo.replace(/^om\./, "");
+  // Strip eg. prefix if present for cleaner module names
+  return repo.replace(/^eg\./, "");
 }

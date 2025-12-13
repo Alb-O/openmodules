@@ -9,7 +9,7 @@ import { findProjectRoot } from "../utils";
 export const init = command({
   name: "init",
   description:
-    "Install the openmodules plugin to the current project or globally",
+    "Install the engrams plugin to the current project or globally",
   args: {
     global: flag({
       long: "global",
@@ -66,8 +66,8 @@ export const init = command({
 
     console.log(pc.dim(`  ${result.path}`));
 
-    // Also create .openmodules directory if it doesn't exist
-    const openmodulesDir = path.join(targetDir, ".openmodules");
+    // Also create .engrams directory if it doesn't exist
+    const openmodulesDir = path.join(targetDir, ".engrams");
     if (!fs.existsSync(openmodulesDir)) {
       fs.mkdirSync(openmodulesDir, { recursive: true });
       console.log(pc.dim(`  Created ${openmodulesDir}/`));

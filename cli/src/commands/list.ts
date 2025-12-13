@@ -79,7 +79,7 @@ function scanModulesRecursive(
   for (const entry of entries) {
     if (entry.isDirectory() && !entry.name.startsWith(".")) {
       const modulePath = path.join(dir, entry.name);
-      const tomlPath = path.join(modulePath, "openmodule.toml");
+      const tomlPath = path.join(modulePath, "engram.toml");
       const hasToml = fs.existsSync(tomlPath);
 
       const tomlData = hasToml ? parseModuleToml(tomlPath) : null;
@@ -87,7 +87,7 @@ function scanModulesRecursive(
       // Recursively scan for nested modules
       const children = scanModulesRecursive(modulePath, scope, depth + 1);
 
-      // Only include as a module if it has openmodule.toml
+      // Only include as a module if it has engram.toml
       // But still traverse for nested modules
       if (hasToml) {
         modules.push({
@@ -163,7 +163,7 @@ function printModuleTree(
     // Warnings
     let warning = "";
     if (!mod.hasToml) {
-      warning = pc.yellow(" (missing openmodule.toml)");
+      warning = pc.yellow(" (missing engram.toml)");
     } else if (mod.parseError) {
       warning = pc.red(` (parse error: ${mod.parseError})`);
     }
@@ -185,7 +185,7 @@ function countModules(modules: ModuleInfo[]): number {
 
 export const list = command({
   name: "list",
-  description: "List installed openmodules",
+  description: "List installed engrams",
   args: {
     global: flag({
       long: "global",

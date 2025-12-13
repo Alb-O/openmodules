@@ -7,7 +7,7 @@
 }:
 
 bun2nix.mkDerivation {
-  pname = "openmodule";
+  pname = "engram";
   version = "0.1.0";
   src = src;
   bunDeps = bun2nix.fetchBunDeps {
@@ -17,7 +17,7 @@ bun2nix.mkDerivation {
 
   # Make plugin bundle available at runtime
   postInstall = ''
-    mkdir -p $out/share/openmodules
-    cp ${pluginBundle}/openmodules.min.js $out/share/openmodules/
+    mkdir -p $out/share/engrams
+    cp ${pluginBundle}/engrams.min.js $out/share/engrams/
   '';
 }

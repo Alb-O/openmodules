@@ -7,7 +7,7 @@ export interface Module {
   metadata?: Record<string, string>;
   license?: string;
   content: string;
-  /** Path to the openmodule.toml manifest */
+  /** Path to the engram.toml manifest */
   manifestPath: string;
   /** Trigger configuration for progressive module discovery */
   triggers?: {
