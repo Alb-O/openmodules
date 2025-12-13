@@ -124,7 +124,6 @@ export function parseEngramToml(tomlPath: string): EngramIndexEntry | null {
     entry.version = parsed.version as string;
   }
 
-  // Parse disclosure triggers
   if (
     parsed["disclosure-triggers"] &&
     typeof parsed["disclosure-triggers"] === "object"
@@ -144,13 +143,11 @@ export function parseEngramToml(tomlPath: string): EngramIndexEntry | null {
         "agent-msg"
       ] as string[];
     }
-    // Remove if empty
     if (Object.keys(entry["disclosure-triggers"]).length === 0) {
       delete entry["disclosure-triggers"];
     }
   }
 
-  // Parse activation triggers
   if (
     parsed["activation-triggers"] &&
     typeof parsed["activation-triggers"] === "object"
@@ -170,13 +167,11 @@ export function parseEngramToml(tomlPath: string): EngramIndexEntry | null {
         "agent-msg"
       ] as string[];
     }
-    // Remove if empty
     if (Object.keys(entry["activation-triggers"]).length === 0) {
       delete entry["activation-triggers"];
     }
   }
 
-  // Extract wrap config (locked SHA will be added by buildIndexFromEngrams if lock=true)
   if (parsed.wrap && typeof parsed.wrap === "object") {
     const wrap = parsed.wrap as Record<string, unknown>;
     if (typeof wrap.remote === "string") {
@@ -190,7 +185,6 @@ export function parseEngramToml(tomlPath: string): EngramIndexEntry | null {
       if (Array.isArray(wrap.sparse)) {
         entry.wrap.sparse = wrap.sparse as string[];
       }
-      // Track if locking is enabled
       if (wrap.lock === true) {
         (entry.wrap as Record<string, unknown>)._lock = true;
       }
@@ -259,11 +253,10 @@ export function buildIndexFromEngrams(repoPath: string): EngramIndex {
 
     const parsed = parseEngramToml(tomlPath);
     if (parsed) {
-      // For wrapped engrams with lock=true, resolve the locked commit from content/
       if (parsed.wrap) {
         const wrapAny = parsed.wrap as Record<string, unknown>;
         const shouldLock = wrapAny._lock === true;
-        delete wrapAny._lock; // Don't include internal flag in index
+        delete wrapAny._lock;
 
         if (shouldLock) {
           const contentDir = path.join(engramPath, "content");
@@ -271,20 +264,16 @@ export function buildIndexFromEngrams(repoPath: string): EngramIndex {
           if (lockedSha) {
             parsed.wrap.locked = lockedSha;
           } else {
-            // Content not initialized yet, can't lock
             delete parsed.wrap.locked;
           }
         } else {
-          // No locking - don't include locked field
           delete parsed.wrap.locked;
         }
         
-        // Clean up empty locked string
         if (parsed.wrap.locked === "") {
           delete (parsed.wrap as Record<string, unknown>).locked;
         }
       } else {
-        // Add URL from .gitmodules if available (for submodule-based engrams)
         const submodulePath = `.engrams/${entry.name}`;
         const url = getSubmoduleUrl(repoPath, submodulePath);
         if (url) {
@@ -329,10 +318,9 @@ export function configureAutoFetch(
   repoPath: string,
   remote: string = "origin",
 ): boolean {
-  // Check if already configured
   const existing = git(["config", "--get-all", `remote.${remote}.fetch`], repoPath);
   if (existing?.includes("refs/engrams/*")) {
-    return true; // Already configured
+    return true;
   }
 
   return gitOk(

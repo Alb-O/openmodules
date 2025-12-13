@@ -59,7 +59,6 @@ export const remove = command({
           isSubmodule = false;
         }
       } catch {
-        // Command failed - not a submodule or no .gitmodules
         isSubmodule = false;
       }
     }

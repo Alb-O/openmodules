@@ -56,17 +56,15 @@ export function installPlugin(
     }
   }
 
-  // Create plugins directory if needed
   if (!fs.existsSync(pluginsDir)) {
     fs.mkdirSync(pluginsDir, { recursive: true });
   }
 
-  // Remove existing file if forcing (may be read-only from Nix)
+  // Remove existing file before copy (may be read-only from Nix)
   if (exists) {
     fs.unlinkSync(pluginPath);
   }
 
-  // Copy the plugin
   fs.copyFileSync(bundledPath, pluginPath);
 
   return { installed: true, path: pluginPath };

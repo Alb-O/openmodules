@@ -118,27 +118,23 @@ function normalizeBasePaths(basePaths: unknown): string[] {
  * Uses realpath to resolve symlinks for accurate ancestry detection.
  */
 async function establishEngramHierarchy(engrams: Engram[]): Promise<void> {
-  // Resolve real paths for all engrams to handle symlinks correctly
   const realPaths = new Map<Engram, string>();
   for (const engram of engrams) {
     realPaths.set(engram, await safeRealpath(engram.directory));
   }
 
-  // Sort by resolved directory depth (shallowest first)
   const sortedByDepth = [...engrams].sort((a, b) => {
     const aPath = realPaths.get(a) || a.directory;
     const bPath = realPaths.get(b) || b.directory;
     return aPath.split(sep).length - bPath.split(sep).length;
   });
 
-  // Map from resolved directory to engram for quick lookup
   const dirToEngram = new Map<string, Engram>();
   for (const engram of sortedByDepth) {
     const realPath = realPaths.get(engram) || engram.directory;
     dirToEngram.set(realPath, engram);
   }
 
-  // For each engram, find its closest ancestor that is also an engram
   for (const engram of sortedByDepth) {
     const realPath = realPaths.get(engram) || engram.directory;
     let currentDir = dirname(realPath);
@@ -146,10 +142,7 @@ async function establishEngramHierarchy(engrams: Engram[]): Promise<void> {
     while (currentDir && currentDir !== dirname(currentDir)) {
       const parentEngram = dirToEngram.get(currentDir);
       if (parentEngram) {
-        // Found the closest parent
         engram.parentToolName = parentEngram.toolName;
-
-        // Add this engram to parent's children
         if (!parentEngram.childToolNames) {
           parentEngram.childToolNames = [];
         }
@@ -206,7 +199,6 @@ export async function discoverEngrams(basePaths: unknown): Promise<Engram[]> {
   for (const engram of engrams) {
     const existing = toolNames.get(engram.toolName);
     if (existing) {
-      // Find or create duplicate entry
       const dup = duplicates.find((d) => d.toolName === engram.toolName);
       if (dup) {
         dup.paths.push(engram.manifestPath);
@@ -232,7 +224,6 @@ export async function discoverEngrams(basePaths: unknown): Promise<Engram[]> {
     );
   }
 
-  // Establish parent-child relationships based on directory hierarchy
   await establishEngramHierarchy(engrams);
 
   return engrams;
@@ -314,12 +305,10 @@ export async function getEngramsFromIndex(
   for (const [key, entry] of Object.entries(index)) {
     const engramPath = join(engramsDir, key);
 
-    // Skip if already initialized
     if (isSubmoduleInitialized(engramPath)) {
       continue;
     }
 
-    // Check if the directory exists (submodule registered but not cloned)
     if (!existsSync(engramPath)) {
       continue;
     }
@@ -356,7 +345,6 @@ git submodule update --init ${engramPath}
       url: entry.url,
     };
 
-    // Convert disclosure triggers
     if (entry["disclosure-triggers"]) {
       const dt = entry["disclosure-triggers"];
       if (dt["any-msg"]?.length || dt["user-msg"]?.length || dt["agent-msg"]?.length) {
@@ -368,7 +356,6 @@ git submodule update --init ${engramPath}
       }
     }
 
-    // Convert activation triggers
     if (entry["activation-triggers"]) {
       const at = entry["activation-triggers"];
       if (at["any-msg"]?.length || at["user-msg"]?.length || at["agent-msg"]?.length) {
@@ -394,10 +381,8 @@ export async function discoverEngramsWithLazy(
   basePaths: unknown,
   repoPath?: string,
 ): Promise<Engram[]> {
-  // First, get normally initialized engrams
   const engrams = await discoverEngrams(basePaths);
 
-  // If we have a repo path, try to get lazy engrams from the index
   if (repoPath) {
     const paths = normalizeBasePaths(basePaths);
     const localEngramsDir = paths.find((p) => p.includes(".engrams"));
@@ -405,7 +390,6 @@ export async function discoverEngramsWithLazy(
     if (localEngramsDir) {
       const lazyEngrams = await getEngramsFromIndex(repoPath, localEngramsDir);
 
-      // Only add lazy engrams that aren't already discovered
       const existingToolNames = new Set(engrams.map((e) => e.toolName));
       for (const lazyEngram of lazyEngrams) {
         if (!existingToolNames.has(lazyEngram.toolName)) {

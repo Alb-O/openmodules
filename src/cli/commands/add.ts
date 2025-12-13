@@ -101,26 +101,20 @@ interface AddParams {
 }
 
 async function handleAdd({ parsed, engramName, projectRoot, targetDir, isGlobal, clone, force, noCache }: AddParams) {
-  // Force clean any existing submodule state (handles broken/partial submodules)
   if (force && !isGlobal && projectRoot) {
     const relativePath = path.relative(projectRoot, targetDir);
-    // Deinit submodule - may not be initialized, that's ok
     Bun.spawnSync(["git", "submodule", "deinit", "-f", relativePath], {
       cwd: projectRoot,
     });
-    // Remove from index - may not be in index, that's ok
     Bun.spawnSync(["git", "rm", "-f", relativePath], {
       cwd: projectRoot,
     });
-    // Find the actual git dir (handles nested submodules)
     const dotGitPath = path.join(projectRoot, ".git");
     const gitDir = resolveGitDir(projectRoot, dotGitPath);
-    // Clean up modules directory
     const gitModulesPath = path.join(gitDir, "modules", relativePath);
     if (fs.existsSync(gitModulesPath)) {
       fs.rmSync(gitModulesPath, { recursive: true, force: true });
     }
-    // Remove directory if exists
     if (fs.existsSync(targetDir)) {
       fs.rmSync(targetDir, { recursive: true, force: true });
     }
@@ -135,7 +129,6 @@ async function handleAdd({ parsed, engramName, projectRoot, targetDir, isGlobal,
     process.exit(1);
   }
 
-  // Ensure parent directory exists
   const parentDir = path.dirname(targetDir);
   if (!fs.existsSync(parentDir)) {
     fs.mkdirSync(parentDir, { recursive: true });
@@ -172,7 +165,6 @@ function resolveGitDir(projectRoot: string, dotGitPath: string): string {
   if (!fs.existsSync(dotGitPath) || !fs.statSync(dotGitPath).isFile()) {
     return dotGitPath;
   }
-  // This repo is itself a submodule - .git is a file pointing to the real location
   const gitFileContent = fs.readFileSync(dotGitPath, "utf-8").trim();
   const match = gitFileContent.match(/^gitdir:\s*(.+)$/);
   if (match) {
@@ -240,7 +232,6 @@ function updateIndexAfterAdd(
 
   entry.url = url;
 
-  // Read existing index or create new one
   const index = readIndex(projectRoot) || {};
   index[engramName] = entry;
 

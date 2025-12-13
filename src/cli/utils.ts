@@ -22,7 +22,6 @@ export function getModulePaths(projectRoot?: string): ModulePaths {
 export function findProjectRoot(): string | null {
   let dir = process.cwd();
   while (dir !== path.dirname(dir)) {
-    // Check for common project indicators
     const gitDir = path.join(dir, ".git");
     const openmodulesDir = path.join(dir, ".engrams");
     if (existsSync(gitDir) || existsSync(openmodulesDir)) {

@@ -86,7 +86,6 @@ export const lazyInit = command({
     const engramToml = readEngramToml(engramDir);
 
     if (engramToml?.wrap) {
-      // This is a wrapped engram - use the wrap config to clone
       if (isWrapInitialized(engramDir)) {
         console.log(pc.yellow(`Engram '${name}' is already initialized`));
         process.exit(0);
@@ -95,7 +94,6 @@ export const lazyInit = command({
       console.log(pc.blue(`Initializing wrapped engram: ${name}...`));
       const wrap = engramToml.wrap;
 
-      // Check index for locked commit (for reproducibility)
       const index = readIndex(projectRoot);
       const indexEntry = index?.[name];
       const lockedRef = indexEntry?.wrap?.locked;
@@ -111,7 +109,6 @@ export const lazyInit = command({
 
       const contentDir = path.join(engramDir, CONTENT_DIR);
       cloneWithSparseCheckout(wrap.remote, contentDir, {
-        // Use locked commit from index if available, otherwise fall back to ref from manifest
         ref: lockedRef || wrap.ref,
         sparse: wrap.sparse,
       });
@@ -123,7 +120,6 @@ export const lazyInit = command({
       return;
     }
 
-    // Fall back to submodule-based lazy init via index
     if (shouldFetch) {
       console.log(pc.dim("Fetching index from remote..."));
       try {
@@ -135,7 +131,6 @@ export const lazyInit = command({
 
     const index = readIndex(projectRoot);
     if (!index) {
-      // Check if the engram directory exists but has no wrap config
       if (fs.existsSync(engramDir)) {
         console.error(pc.red(`Error: Engram '${name}' has no [wrap] config and no index entry`));
         console.error(pc.dim("Add a [wrap] section to engram.toml or sync the index"));
@@ -146,7 +141,6 @@ export const lazyInit = command({
     }
 
     if (all) {
-      // Initialize all uninitialized engrams
       let initialized = 0;
       let skipped = 0;
 
@@ -173,7 +167,6 @@ export const lazyInit = command({
       return;
     }
 
-    // Initialize specific engram from index (submodule)
     if (!index[name]) {
       console.error(pc.red(`Error: Engram '${name}' not found in index`));
       console.error(pc.dim("Available engrams:"));

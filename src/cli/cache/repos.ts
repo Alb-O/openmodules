@@ -52,12 +52,10 @@ function gitExec(
  * Uses a normalized URL structure: domain/owner/repo.git
  */
 export function urlToCachePath(url: string): string {
-  // Normalize URL to extract domain/owner/repo
   const match = url.match(
     /(?:https?:\/\/|git@)([^/:]+)[/:]([^/]+)\/([^/]+?)(?:\.git)?$/,
   );
   if (!match) {
-    // Fallback to hash-based path for unusual URLs
     const hash = new Bun.CryptoHasher("sha256")
       .update(url)
       .digest("hex")
@@ -95,21 +93,18 @@ export function ensureCached(
   const quiet = options?.quiet ?? false;
 
   if (fs.existsSync(cachePath)) {
-    // Update existing cache
     const result = Bun.spawnSync(["git", "fetch", "--all", "--prune"], {
       cwd: cachePath,
       stdout: quiet ? "pipe" : "inherit",
       stderr: quiet ? "pipe" : "inherit",
     });
     if (!result.success) {
-      // Fetch failed - warn but continue with stale cache
       const errorMsg = result.stderr?.toString().trim() || "Unknown error";
       console.warn(pc.yellow(`Warning: Failed to update cache for ${url}`));
       console.warn(pc.dim(`  ${errorMsg}`));
       console.warn(pc.dim("  Using potentially stale cached version"));
     }
   } else {
-    // Clone as bare repo into cache
     const parentDir = path.dirname(cachePath);
     if (!fs.existsSync(parentDir)) {
       fs.mkdirSync(parentDir, { recursive: true });
@@ -156,8 +151,6 @@ export function submoduleAddFromCache(
   args.push("--reference", cachePath, url, relativePath);
 
   gitExec(args, { cwd: projectRoot, quiet: options?.quiet });
-
-  // Initialize the submodule - may fail if repo has unusual state, that's ok
   gitOk(["submodule", "update", "--init", relativePath], projectRoot);
 }
 
@@ -182,7 +175,6 @@ export function listCachedRepos(): Array<{
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         if (entry.name.endsWith(".git")) {
-          // This is a bare repo - get URL or skip if not valid
           const url = git(["config", "--get", "remote.origin.url"], fullPath);
           if (url) {
             const size = getDirSize(fullPath);
@@ -248,7 +240,6 @@ export function cloneWithSparseCheckout(
 ): void {
   const { ref, sparse, noCache = false, quiet = false } = options;
 
-  // Build clone args
   const needsDelayedCheckout = (sparse && sparse.length > 0) || ref;
   const cloneArgs = ["clone", "--filter=blob:none"];
 
@@ -256,18 +247,15 @@ export function cloneWithSparseCheckout(
     cloneArgs.push("--no-checkout");
   }
 
-  // Add branch flag if ref is not a commit hash
   if (ref && !ref.match(/^[0-9a-f]{40}$/i)) {
     cloneArgs.push("-b", ref);
   }
 
   if (noCache) {
-    // Direct clone without cache
     if (!ref) {
       cloneArgs.push("--depth", "1");
     }
   } else {
-    // Clone using cache as reference for object sharing
     const cachePath = ensureCached(url, { quiet });
     cloneArgs.push("--reference", cachePath);
   }
@@ -275,11 +263,9 @@ export function cloneWithSparseCheckout(
   cloneArgs.push(url, targetDir);
   gitExec(cloneArgs, { quiet });
 
-  // Configure sparse-checkout if patterns provided
   if (sparse && sparse.length > 0) {
     gitExec(["sparse-checkout", "init"], { cwd: targetDir, quiet: true });
 
-    // Use shell for glob pattern handling
     const sparseSetArgs = [
       "-c",
       `git sparse-checkout set --no-cone ${sparse.map((p) => `'${p}'`).join(" ")}`,
@@ -296,10 +282,8 @@ export function cloneWithSparseCheckout(
     }
   }
 
-  // Checkout specific ref if needed
   if (needsDelayedCheckout) {
     const checkoutRef = ref || "HEAD";
-    // Suppress detached HEAD warning when checking out a specific commit
     gitExec(
       ["-c", "advice.detachedHead=false", "checkout", checkoutRef],
       { cwd: targetDir, quiet },

@@ -95,7 +95,6 @@ function generateManifest(
  * Infer a reasonable name from a repo URL or path.
  */
 function inferName(source: string): string {
-  // Try parsing as URL first
   const parsed = parseRepoUrl(source);
   if (parsed) {
     return parsed.repo
@@ -105,7 +104,6 @@ function inferName(source: string): string {
       .join(" ");
   }
 
-  // Fall back to directory name
   const basename = path.basename(source);
   return basename
     .replace(/^eg\./, "")
@@ -121,7 +119,6 @@ function inferName(source: string): string {
 function inferContentPath(patterns: string[], targetDir: string): string {
   const contentDir = path.join(targetDir, CONTENT_DIR);
   
-  // If we have sparse patterns, extract the common prefix
   if (patterns.length > 0) {
     const firstPattern = patterns[0];
     const match = firstPattern.match(/^([^*]+)\//);
@@ -130,7 +127,6 @@ function inferContentPath(patterns: string[], targetDir: string): string {
     }
   }
 
-  // Look for common documentation directories inside content/
   if (fs.existsSync(contentDir)) {
     const docDirs = ["docs", "doc", "documentation"];
     for (const dir of docDirs) {
@@ -216,7 +212,6 @@ export const wrap = command({
     const projectRoot = findProjectRoot();
     const paths = getModulePaths(projectRoot || undefined);
 
-    // Determine if source is a URL or local path
     const parsed = parseRepoUrl(source);
     const isRemote = parsed !== null;
     const isLocalPath = !isRemote && (source.startsWith("/") || source.startsWith("./") || source.startsWith("../"));
@@ -227,7 +222,6 @@ export const wrap = command({
       process.exit(1);
     }
 
-    // Determine target directory
     const dirName = engramName || (parsed ? getEngramName(parsed.repo) : path.basename(source));
     const engramsDir = isGlobal ? paths.global : paths.local;
 
@@ -239,7 +233,6 @@ export const wrap = command({
 
     const targetDir = path.join(engramsDir, dirName);
 
-    // Handle force cleanup
     if (force && fs.existsSync(targetDir)) {
       fs.rmSync(targetDir, { recursive: true, force: true });
       console.log(pc.yellow(`Removed existing engram at ${targetDir}`));
@@ -251,12 +244,10 @@ export const wrap = command({
       process.exit(1);
     }
 
-    // Ensure parent directory exists
     if (!fs.existsSync(engramsDir)) {
       fs.mkdirSync(engramsDir, { recursive: true });
     }
 
-    // Handle remote repos
     if (isRemote) {
       if (lazy) {
         // Lazy mode: just create the directory for the manifest
@@ -283,7 +274,6 @@ export const wrap = command({
         console.error(pc.red("Error: --lazy flag is only valid for remote repositories"));
         process.exit(1);
       }
-      // Handle local paths - create symlink
       const absoluteSource = path.resolve(source);
       if (!fs.existsSync(absoluteSource)) {
         console.error(pc.red(`Error: Source path does not exist: ${absoluteSource}`));
@@ -295,7 +285,6 @@ export const wrap = command({
       fs.symlinkSync(relativePath, targetDir);
     }
 
-    // Check if engram.toml already exists
     const manifestPath = path.join(targetDir, "engram.toml");
     const readmePath = path.join(targetDir, "README.md");
     const hasManifest = fs.existsSync(manifestPath);
@@ -306,14 +295,13 @@ export const wrap = command({
       return;
     }
 
-    // Generate manifest and README
     const inferredName = name || inferName(source);
     const contentPath = inferContentPath(sparse, targetDir);
     const inferredDescription = description || 
       `Documentation from ${parsed ? `${parsed.owner}/${parsed.repo}` : path.basename(source)}` +
       (contentPath ? ` (${contentPath}/)` : "");
 
-    // Infer triggers from name if not provided
+    // Infer triggers from name if none provided
     const inferredTriggers = triggers.length > 0 ? triggers : 
       inferredName.toLowerCase().split(/\s+/).filter(w => w.length > 2);
 
@@ -333,16 +321,13 @@ export const wrap = command({
       console.log(pc.dim(`  Triggers: ${inferredTriggers.join(", ")}`));
     }
 
-    // Build wrap config for remote repos
     const wrapConfig: WrapConfig | undefined = isRemote
       ? { remote: parsed!.url, ref, sparse, lock: lock || undefined }
       : undefined;
 
-    // Write manifest
     const manifest = generateManifest(inferredName, inferredDescription, inferredTriggers, wrapConfig);
     fs.writeFileSync(manifestPath, manifest);
 
-    // Write README if it doesn't exist
     if (!fs.existsSync(readmePath)) {
       const readme = generateReadme(
         inferredName,
@@ -353,7 +338,6 @@ export const wrap = command({
       fs.writeFileSync(readmePath, readme);
     }
 
-    // Create .gitignore to exclude cloned content
     const gitignorePath = path.join(targetDir, ".gitignore");
     const gitignoreComment = lazy
       ? "# Cloned repo content (run 'engram lazy-init' to populate)"

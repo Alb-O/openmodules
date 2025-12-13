@@ -131,17 +131,15 @@ function scanEngramsRecursive(
 
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
-    // Skip hidden entries
     if (entry.name.startsWith(".")) continue;
 
-    // Check if entry is a directory (or symlink to directory)
     let isDir = entry.isDirectory();
     if (entry.isSymbolicLink()) {
       const targetPath = path.join(dir, entry.name);
       try {
         isDir = fs.statSync(targetPath).isDirectory();
       } catch {
-        continue; // Skip broken symlinks
+        continue;
       }
     }
 
@@ -152,13 +150,9 @@ function scanEngramsRecursive(
 
       const tomlData = hasToml ? parseEngramToml(tomlPath) : null;
 
-      // Recursively scan for nested engrams
       const children = scanEngramsRecursive(engramPath, scope, depth + 1);
 
-      // Only include as an engram if it has engram.toml
-      // But still traverse for nested engrams
       if (hasToml) {
-        // For wrapped engrams, check if content exists beyond manifest files
         const isWrapped = tomlData?.hasWrap ?? false;
         const initialized = isWrapped
           ? isWrappedEngramInitialized(engramPath)
@@ -180,7 +174,6 @@ function scanEngramsRecursive(
           isWrapped,
         });
       } else if (children.length > 0) {
-        // Directory has no toml but contains nested engrams - include children at this level
         engrams.push(...children);
       }
     }
@@ -203,7 +196,6 @@ function getTriggerSummary(
     (activation?.agentMsg?.length || 0);
   const total = disclosureCount + activationCount;
 
-  // No triggers defined = always visible
   if (total === 0) return pc.green("always visible");
 
   const parts: string[] = [];
@@ -224,17 +216,13 @@ function printEngramTree(
     const connector = isLastItem ? "└─" : "├─";
     const childPrefix = isLastItem ? "  " : "│ ";
 
-    // Initialization status indicator
-    // ● = initialized, ◐ = lazy (wrapped but not cloned), ○ = not initialized
     const statusDot = getStatusDot(eg);
 
-    // Engram name and display name
     const nameDisplay =
       eg.displayName !== eg.name
         ? `${pc.bold(eg.name)} ${pc.dim(`(${eg.displayName})`)}`
         : pc.bold(eg.name);
 
-    // Description (truncated if needed)
     const maxDescLen = 50;
     let desc = "";
     if (eg.description) {
@@ -244,11 +232,9 @@ function printEngramTree(
     }
     const descDisplay = desc ? pc.dim(` - ${desc}`) : "";
 
-    // Trigger summary
     const triggerDisplay = getTriggerSummary(eg.disclosureTriggers, eg.activationTriggers);
     const triggerPart = triggerDisplay ? ` [${triggerDisplay}]` : "";
 
-    // Warnings
     let warning = "";
     if (!eg.hasToml && !eg.fromIndex) {
       warning = pc.yellow(" (missing engram.toml)");
@@ -260,7 +246,6 @@ function printEngramTree(
       `${prefix}${connector} ${statusDot} ${nameDisplay}${descDisplay}${triggerPart}${warning}`,
     );
 
-    // Print children with updated prefix
     if (eg.children.length > 0) {
       printEngramTree(eg.children, prefix + childPrefix, isLastItem);
     }
@@ -286,10 +271,8 @@ function getUninitializedFromIndex(
   for (const [name, entry] of Object.entries(index)) {
     if (existingNames.has(name)) continue;
 
-    // Check if directory exists but is empty (submodule registered but not cloned)
     const submodulePath = `.engrams/${name}`;
     if (!isSubmoduleInitialized(projectRoot, submodulePath)) {
-      // Convert trigger format
       const disclosureTriggers = entry["disclosure-triggers"]
         ? {
             anyMsg: entry["disclosure-triggers"]["any-msg"],
@@ -359,7 +342,6 @@ export const list = command({
     if (!globalOnly && paths.local) {
       localEngrams = scanEngramsRecursive(paths.local, "local");
 
-      // Add uninitialized engrams from the index
       if (projectRoot) {
         const existingNames = new Set(localEngrams.map((e) => e.name));
         const uninitialized = getUninitializedFromIndex(projectRoot, existingNames);
@@ -380,7 +362,6 @@ export const list = command({
       return;
     }
 
-    // Flatten helper for --flat flag
     const flatten = (engrams: EngramInfo[]): EngramInfo[] => {
       return engrams.flatMap((e) => [
         { ...e, children: [] },
