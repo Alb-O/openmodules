@@ -11,6 +11,7 @@
       pkgs,
       inputs,
       self',
+      rootSrc,
       ...
     }:
     {
@@ -26,7 +27,12 @@
         shellHook = ''
           if [ -t 0 ]; then
             bun install --frozen-lockfile
-            (cd cli && bun install --frozen-lockfile)
+
+            # Install pre-commit hook
+            if [ -d .git ]; then
+              cp ${rootSrc}/nix/scripts/pre-commit .git/hooks/pre-commit
+              chmod +x .git/hooks/pre-commit
+            fi
           fi
         '';
       };

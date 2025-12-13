@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Pre-commit hook to auto-format staged files and run lints
+
+set -e
+
+# Check if treefmt is available
+if ! command -v treefmt &> /dev/null; then
+    echo "treefmt not found. Run 'nix develop' to enter the dev shell."
+    exit 1
+fi
+
+# Get list of staged files
+staged_files=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$staged_files" ]; then
+    exit 0
+fi
+
+# Run treefmt on staged files
+echo "Running treefmt on staged files..."
+echo "$staged_files" | xargs treefmt --no-cache
+
+# Re-add any files that were modified by treefmt
+echo "$staged_files" | while read -r file; do
+    if [ -f "$file" ]; then
+        git add "$file"
+    fi
+done
+
+echo "Formatting complete."
+
+# Run ast-grep lint scan
+if command -v ast-grep &> /dev/null; then
+    echo "Running ast-grep scan..."
+    if ! ast-grep scan; then
+        echo "ast-grep scan found issues. Please fix them before committing."
+        exit 1
+    fi
+    echo "ast-grep scan passed."
+else
+    echo "Warning: ast-grep not found, skipping lint scan."
+fi
