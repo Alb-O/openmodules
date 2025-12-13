@@ -74,13 +74,13 @@ Modules can specify `context-triggers` - phrases or words that, when detected in
 Trigger patterns use git-style globs (including brace expansion), so `docstring{s,}` matches both `docstring` and `docstrings`. Patterns without wildcards (`*`, `?`, or character classes) only match whole words separated by non-alphanumeric boundaries (spaces, `_`, `-`, punctuation). Add a wildcard when you need substring matching.
 
 ```toml
-context-triggers = [".af file", "affinity designer", "afdesign", "docstring{s,}"]
+context-triggers = [".pdf", "pdf file", "pdf document", "docstring{s,}"]
 ```
 
 By default, triggers only match user messages. Set `match-ai-messages = true` to also match AI responses and tool output. This is useful for file-type detection modules where seeing extensions in directory listings or AI analysis should activate the module:
 
 ```toml
-context-triggers = [".afdesign", "affinity designer"]
+context-triggers = [".pdf", "pdf document"]
 match-ai-messages = true
 ```
 

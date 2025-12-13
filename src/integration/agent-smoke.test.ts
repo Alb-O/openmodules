@@ -114,10 +114,10 @@ async function setupTestDir(): Promise<TestContext> {
   await createModule(
     modulesRoot,
     "assets",
-    "Affinity asset extraction helper",
-    "Helper for Affinity Designer assets when requested explicitly.",
-    [".af", "afdesign", "affinity designer"],
-    "Affinity extractor README."
+    "PDF document processing helper",
+    "Helper for PDF document extraction and processing.",
+    [".pdf", "pdf file", "pdf document"],
+    "PDF processing helper README."
   );
 
   if (!(await pathExists(pluginPath))) {
@@ -182,7 +182,7 @@ describe.skipIf(!shouldRun)("openmodules agent smoke", () => {
 
         const third = await runOpencode(
           ctx.testDir,
-          "I have Affinity Designer .af files. Reply only with the openmodule_ tools you can see."
+          "I have some .pdf files to process. Reply only with the openmodule_ tools you can see."
         );
 
         expect(third.exitCode, third.stderr || third.stdout).toBe(0);

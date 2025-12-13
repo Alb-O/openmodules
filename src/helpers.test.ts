@@ -178,7 +178,7 @@ describe("modules helpers", () => {
           description: "Detects file types from AI output",
           content: "detector",
           manifestPath: "/tmp/file-detector/openmodule.toml",
-          contextTriggers: [".afdesign", ".af file"],
+          contextTriggers: [".pdf", "pdf file"],
           matchAiMessages: true,
         },
         {
