@@ -57,8 +57,10 @@ async function createModule(
   ];
 
   if (triggers && triggers.length > 0) {
+    manifestLines.push("");
+    manifestLines.push("[triggers]");
     manifestLines.push(
-      `context-triggers = [${triggers.map((t) => `"${t}"`).join(", ")}]`
+      `context = [${triggers.map((t) => `"${t}"`).join(", ")}]`
     );
   }
 

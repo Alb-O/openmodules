@@ -182,10 +182,15 @@ const ModuleManifestSchema = z.object({
     license: z.string().optional(),
     /** Relative path to prompt file from module root. Defaults to README.md */
     prompt: z.string().optional(),
-    /** Phrases/words that trigger module visibility when they appear in context */
-    "context-triggers": z.array(z.string()).optional(),
-    /** Whether to also match triggers in AI messages (default: false, user messages only) */
-    "match-ai-messages": z.boolean().optional(),
+    /** Trigger configuration for progressive module discovery */
+    triggers: z
+        .object({
+            /** Phrases/words that trigger module visibility when they appear in context */
+            context: z.array(z.string()).optional(),
+            /** Whether to also match triggers in AI messages (default: false, user messages only) */
+            "match-ai-messages": z.boolean().optional(),
+        })
+        .optional(),
     "allowed-tools": z.array(z.string()).optional(),
     metadata: z.record(z.string(), z.string()).optional(),
     author: z
@@ -288,8 +293,8 @@ export async function parseModule(
             toolName: generateToolName(manifestPath, baseDir),
             description: parsed.data.description,
             allowedTools: parsed.data["allowed-tools"],
-            contextTriggers: parsed.data["context-triggers"],
-            matchAiMessages: parsed.data["match-ai-messages"],
+            contextTriggers: parsed.data.triggers?.context,
+            matchAiMessages: parsed.data.triggers?.["match-ai-messages"],
             metadata: parsed.data.metadata,
             license: parsed.data.license,
             content: promptContent.trim(),

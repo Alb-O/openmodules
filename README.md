@@ -59,28 +59,31 @@ description = "Short description for tool listing"
 # Defaults to "README.md"
 prompt = "docs/AGENT.md"
 
-# Optional: phrases that make this module visible when they appear in context
-context-triggers = ["database backup", "backup script", "db dump"]
-
 [author]
 name = "Your Name"
 url = "https://github.com/you"
+
+# Optional: trigger configuration for progressive module discovery
+[triggers]
+context = ["database backup", "backup script", "db dump"]
 ```
 
 ### Context Triggers
 
-Modules can specify `context-triggers` - phrases or words that, when detected in the conversation context, make the module "visible" (shown in available tools list). Discovery is progressive: module tools stay hidden until a trigger matches; modules without triggers remain visible.
+Modules can specify `triggers.context` - phrases or words that, when detected in the conversation context, make the module "visible" (shown in available tools list). Discovery is progressive: module tools stay hidden until a trigger matches; modules without triggers remain visible.
 
 Trigger patterns use git-style globs (including brace expansion), so `docstring{s,}` matches both `docstring` and `docstrings`. Patterns without wildcards (`*`, `?`, or character classes) only match whole words separated by non-alphanumeric boundaries (spaces, `_`, `-`, punctuation). Add a wildcard when you need substring matching.
 
 ```toml
-context-triggers = [".pdf", "pdf file", "pdf document", "docstring{s,}"]
+[triggers]
+context = [".pdf", "pdf file", "pdf document", "docstring{s,}"]
 ```
 
 By default, triggers only match user messages. Set `match-ai-messages = true` to also match AI responses and tool output. This is useful for file-type detection modules where seeing extensions in directory listings or AI analysis should activate the module:
 
 ```toml
-context-triggers = [".pdf", "pdf document"]
+[triggers]
+context = [".pdf", "pdf document"]
 match-ai-messages = true
 ```
 
