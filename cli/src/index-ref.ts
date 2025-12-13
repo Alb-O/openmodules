@@ -15,11 +15,23 @@ export interface EngramIndexEntry {
   name: string;
   description: string;
   version?: string;
+  /** URL for submodule-based engrams */
   url?: string;
   triggers?: {
     "any-msg"?: string[];
     "user-msg"?: string[];
     "agent-msg"?: string[];
+  };
+  /** Configuration for wrapped external repositories (alternative to submodules) */
+  wrap?: {
+    /** Git remote URL */
+    remote: string;
+    /** Requested ref (branch, tag) - what user asked for */
+    ref?: string;
+    /** Locked commit SHA - exact revision for reproducibility */
+    locked: string;
+    /** Sparse-checkout patterns */
+    sparse?: string[];
   };
 }
 
@@ -95,7 +107,8 @@ export function indexExists(repoPath: string): boolean {
 }
 
 /**
- * Parse an engram.toml file into an index entry
+ * Parse an engram.toml file into an index entry.
+ * Note: wrap.locked is NOT set here - it must be resolved from git in buildIndexFromEngrams.
  */
 export function parseEngramToml(tomlPath: string): EngramIndexEntry | null {
   if (!existsSync(tomlPath)) return null;
@@ -123,6 +136,23 @@ export function parseEngramToml(tomlPath: string): EngramIndexEntry | null {
     }
     if (Array.isArray(triggers["agent-msg"])) {
       entry.triggers["agent-msg"] = triggers["agent-msg"] as string[];
+    }
+  }
+
+  // Extract wrap config (locked will be added by buildIndexFromEngrams)
+  if (parsed.wrap && typeof parsed.wrap === "object") {
+    const wrap = parsed.wrap as Record<string, unknown>;
+    if (typeof wrap.remote === "string") {
+      entry.wrap = {
+        remote: wrap.remote,
+        locked: "", // Placeholder - must be resolved from git
+      };
+      if (typeof wrap.ref === "string") {
+        entry.wrap.ref = wrap.ref;
+      }
+      if (Array.isArray(wrap.sparse)) {
+        entry.wrap.sparse = wrap.sparse as string[];
+      }
     }
   }
 
@@ -188,11 +218,23 @@ export function buildIndexFromEngrams(repoPath: string): EngramIndex {
 
     const parsed = parseEngramToml(tomlPath);
     if (parsed) {
-      // Add URL from .gitmodules if available
-      const submodulePath = `.engrams/${entry.name}`;
-      const url = getSubmoduleUrl(repoPath, submodulePath);
-      if (url) {
-        parsed.url = url;
+      // For wrapped engrams, resolve the locked commit from content/
+      if (parsed.wrap) {
+        const contentDir = path.join(engramPath, "content");
+        const lockedSha = git(["rev-parse", "HEAD"], contentDir);
+        if (lockedSha) {
+          parsed.wrap.locked = lockedSha;
+        } else {
+          // Content not initialized yet, skip wrap info
+          delete parsed.wrap;
+        }
+      } else {
+        // Add URL from .gitmodules if available (for submodule-based engrams)
+        const submodulePath = `.engrams/${entry.name}`;
+        const url = getSubmoduleUrl(repoPath, submodulePath);
+        if (url) {
+          parsed.url = url;
+        }
       }
       index[entry.name] = parsed;
     }

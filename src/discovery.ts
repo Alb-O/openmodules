@@ -253,11 +253,19 @@ interface IndexEntry {
   name: string;
   description: string;
   version?: string;
+  /** URL for submodule-based engrams */
   url?: string;
   triggers?: {
     "any-msg"?: string[];
     "user-msg"?: string[];
     "agent-msg"?: string[];
+  };
+  /** Configuration for wrapped external repositories */
+  wrap?: {
+    remote: string;
+    ref?: string;
+    locked: string;
+    sparse?: string[];
   };
 }
 

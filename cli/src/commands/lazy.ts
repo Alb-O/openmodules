@@ -10,6 +10,7 @@ import {
   initSubmodule,
   isSubmoduleInitialized,
   configureAutoFetch,
+  EngramIndexEntry,
 } from "../index-ref";
 import { CONTENT_DIR, MANIFEST_FILES } from "./wrap";
 import { cloneWithSparseCheckout } from "../cache";
@@ -96,16 +97,24 @@ export const lazyInit = command({
       console.log(pc.blue(`Initializing wrapped engram: ${name}...`));
       const wrap = engramToml.wrap;
 
+      // Check index for locked commit (for reproducibility)
+      const index = readIndex(projectRoot);
+      const indexEntry = index?.[name];
+      const lockedRef = indexEntry?.wrap?.locked;
+
       if (wrap.sparse && wrap.sparse.length > 0) {
         console.log(pc.dim(`Sparse patterns: ${wrap.sparse.join(", ")}`));
       }
-      if (wrap.ref) {
+      if (lockedRef) {
+        console.log(pc.dim(`Locked: ${lockedRef.slice(0, 12)}`));
+      } else if (wrap.ref) {
         console.log(pc.dim(`Ref: ${wrap.ref}`));
       }
 
       const contentDir = path.join(engramDir, CONTENT_DIR);
       cloneWithSparseCheckout(wrap.remote, contentDir, {
-        ref: wrap.ref,
+        // Use locked commit from index if available, otherwise fall back to ref from manifest
+        ref: lockedRef || wrap.ref,
         sparse: wrap.sparse,
       });
 
