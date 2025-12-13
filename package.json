@@ -22,7 +22,7 @@
     "build": "bun build ./src/index.ts --outdir ./dist --target node && bun run build:types && bun run build:bundle && bun run build:cli",
     "build:types": "tsc --emitDeclarationOnly --declaration --outDir ./dist",
     "build:bundle": "bun build ./src/index.ts --outfile ./dist/engrams.bundle.js --target node --minify --external zod --external @opencode-ai/plugin",
-    "build:cli": "bun build ./src/cli/index.ts --outfile ./dist/cli.js --target node",
+    "build:cli": "bun build ./src/cli/index.ts --compile --outfile ./dist/engram",
     "test": "bun test src/ --timeout 120000",
     "prepublishOnly": "bun run build"
   },

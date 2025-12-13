@@ -13,6 +13,9 @@ bun2nix.mkDerivation {
     inherit bunNix;
   };
 
+  # Don't strip binaries - Bun compiled binaries embed their code in the executable
+  dontStrip = true;
+
   # Don't use the default bun build (which expects --compile)
   dontUseBunBuild = true;
 
@@ -28,10 +31,10 @@ bun2nix.mkDerivation {
       --external zod \
       --external @opencode-ai/plugin
 
-    # Build the CLI
+    # Build the CLI as a standalone executable with embedded Bun runtime
     bun build ./src/cli/index.ts \
-      --outfile ./dist/cli.js \
-      --target node
+      --compile \
+      --outfile ./dist/engram
 
     runHook postBuild
   '';
@@ -43,8 +46,7 @@ bun2nix.mkDerivation {
     runHook preInstall
     mkdir -p $out/bin $out/share/engrams
     cp dist/engrams.bundle.js $out/share/engrams/engrams.min.js
-    cp dist/cli.js $out/bin/engram
-    chmod +x $out/bin/engram
+    cp dist/engram $out/bin/engram
     runHook postInstall
   '';
 }
