@@ -23,18 +23,14 @@ function git(args: string[], cwd: string): string | null {
  * Safely stat a path, returning null if it doesn't exist or fails.
  */
 async function safeStat(path: string) {
-  const file = Bun.file(path);
-  if (!(await file.exists())) return null;
-  return fs.stat(path);
+  return fs.stat(path).catch(() => null);
 }
 
 /**
  * Safely get realpath, returning original path on failure.
  */
 async function safeRealpath(path: string): Promise<string> {
-  const file = Bun.file(path);
-  if (!(await file.exists())) return path;
-  return fs.realpath(path);
+  return fs.realpath(path).catch(() => path);
 }
 
 /**
@@ -49,10 +45,19 @@ export async function findEngramFiles(basePath: string): Promise<string[]> {
   while (queue.length > 0) {
     const current = queue.pop() as string;
 
-    // Check if path exists before trying to resolve
-    if (!(await Bun.file(current).exists())) {
+    const stat = await safeStat(current);
+    if (!stat) {
       if (current === basePath) {
         const err = new Error(`ENOENT: no such file or directory, '${current}'`) as NodeJS.ErrnoException;
+        err.code = "ENOENT";
+        throw err;
+      }
+      continue;
+    }
+
+    if (!stat.isDirectory()) {
+      if (current === basePath) {
+        const err = new Error(`ENOENT: not a directory, '${current}'`) as NodeJS.ErrnoException;
         err.code = "ENOENT";
         throw err;
       }
@@ -66,18 +71,7 @@ export async function findEngramFiles(basePath: string): Promise<string[]> {
     }
     visited.add(realCurrent);
 
-    let entries: Dirent[];
-    const stat = await safeStat(current);
-    if (!stat?.isDirectory()) {
-      if (current === basePath) {
-        const err = new Error(`ENOENT: not a directory, '${current}'`) as NodeJS.ErrnoException;
-        err.code = "ENOENT";
-        throw err;
-      }
-      continue;
-    }
-
-    entries = await fs.readdir(current, { withFileTypes: true });
+    const entries = await fs.readdir(current, { withFileTypes: true });
 
     for (const entry of entries) {
       const fullPath = join(current, entry.name);

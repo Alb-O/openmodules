@@ -68,11 +68,11 @@ async function getFileInlineComment(filePath: string): Promise<string | null> {
 }
 
 /**
- * Safely read a directory, returning empty array if it doesn't exist.
+ * Safely read a directory, returning empty array if it doesn't exist or isn't a directory.
  */
 async function safeReaddir(path: string): Promise<Dirent[]> {
-  const file = Bun.file(path);
-  if (!(await file.exists())) return [];
+  const stat = await safeStat(path);
+  if (!stat?.isDirectory()) return [];
   return fs.readdir(path, { withFileTypes: true });
 }
 
@@ -80,9 +80,7 @@ async function safeReaddir(path: string): Promise<Dirent[]> {
  * Safely stat a path, returning null if it doesn't exist.
  */
 async function safeStat(path: string) {
-  const file = Bun.file(path);
-  if (!(await file.exists())) return null;
-  return fs.stat(path);
+  return fs.stat(path).catch(() => null);
 }
 
 /**
