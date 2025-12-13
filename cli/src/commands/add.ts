@@ -3,7 +3,13 @@ import { execSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import pc from "picocolors";
-import { getModulePaths, findProjectRoot, parseRepoUrl, getModuleName, getSupportedDomains } from "../utils";
+import {
+  getModulePaths,
+  findProjectRoot,
+  parseRepoUrl,
+  getModuleName,
+  getSupportedDomains,
+} from "../utils";
 import { submoduleAddFromCache, cloneFromCache, isCached } from "../cache";
 
 export const add = command({
@@ -29,7 +35,8 @@ export const add = command({
     clone: flag({
       long: "clone",
       short: "c",
-      description: "Clone instead of adding as submodule (default in git repos is submodule)",
+      description:
+        "Clone instead of adding as submodule (default in git repos is submodule)",
     }),
     force: flag({
       long: "force",
@@ -45,8 +52,12 @@ export const add = command({
     const parsed = parseRepoUrl(repo);
     if (!parsed) {
       console.error(pc.red(`Error: Invalid repository format: ${repo}`));
-      console.error(pc.dim("Formats: owner/repo, domain:owner/repo, or full URL"));
-      console.error(pc.dim(`Supported domains: ${getSupportedDomains().join(", ")}`));
+      console.error(
+        pc.dim("Formats: owner/repo, domain:owner/repo, or full URL"),
+      );
+      console.error(
+        pc.dim(`Supported domains: ${getSupportedDomains().join(", ")}`),
+      );
       process.exit(1);
     }
 
@@ -60,7 +71,11 @@ export const add = command({
     } else {
       if (!projectRoot) {
         console.error(pc.red("Error: Not in a project directory"));
-        console.error(pc.dim("Use --global to install globally, or run from a git repository"));
+        console.error(
+          pc.dim(
+            "Use --global to install globally, or run from a git repository",
+          ),
+        );
         process.exit(1);
       }
       targetDir = path.join(paths.local!, moduleName);
@@ -111,7 +126,9 @@ export const add = command({
       if (fs.existsSync(targetDir)) {
         fs.rmSync(targetDir, { recursive: true, force: true });
       }
-      console.log(pc.yellow(`Cleaned up existing module state for ${moduleName}`));
+      console.log(
+        pc.yellow(`Cleaned up existing module state for ${moduleName}`),
+      );
     } else if (fs.existsSync(targetDir)) {
       // Check if already exists (non-force mode)
       console.error(pc.red(`Error: Module already exists at ${targetDir}`));
@@ -125,7 +142,9 @@ export const add = command({
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    console.log(pc.blue(`Adding ${parsed.owner}/${parsed.repo} as ${moduleName}...`));
+    console.log(
+      pc.blue(`Adding ${parsed.owner}/${parsed.repo} as ${moduleName}...`),
+    );
 
     const cached = isCached(parsed.url);
     if (cached) {
@@ -138,12 +157,17 @@ export const add = command({
         const relativePath = path.relative(projectRoot!, targetDir);
         if (noCache) {
           const forceFlag = force ? "--force " : "";
-          execSync(`git submodule add ${forceFlag}${parsed.url} ${relativePath}`, {
-            cwd: projectRoot!,
-            stdio: "inherit",
-          });
+          execSync(
+            `git submodule add ${forceFlag}${parsed.url} ${relativePath}`,
+            {
+              cwd: projectRoot!,
+              stdio: "inherit",
+            },
+          );
         } else {
-          submoduleAddFromCache(parsed.url, relativePath, projectRoot!, { force });
+          submoduleAddFromCache(parsed.url, relativePath, projectRoot!, {
+            force,
+          });
         }
         console.log(pc.green(`✓ Added as submodule: ${targetDir}`));
       } else {
@@ -158,7 +182,8 @@ export const add = command({
         console.log(pc.green(`✓ Cloned to: ${targetDir}`));
       }
     } catch (error: any) {
-      const errorMessage = error?.message || error?.stderr?.toString() || String(error);
+      const errorMessage =
+        error?.message || error?.stderr?.toString() || String(error);
       console.error(pc.red("Failed to add module:"));
       console.error(pc.dim(errorMessage));
       if (error?.status) {

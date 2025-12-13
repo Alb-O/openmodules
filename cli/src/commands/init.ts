@@ -8,7 +8,8 @@ import { findProjectRoot } from "../utils";
 
 export const init = command({
   name: "init",
-  description: "Install the openmodules plugin to the current project or globally",
+  description:
+    "Install the openmodules plugin to the current project or globally",
   args: {
     global: flag({
       long: "global",
@@ -39,7 +40,11 @@ export const init = command({
       const projectRoot = findProjectRoot();
       if (!projectRoot) {
         console.error(pc.red("Error: Not in a project directory"));
-        console.error(pc.dim("Use --global to install globally, or run from a git repository"));
+        console.error(
+          pc.dim(
+            "Use --global to install globally, or run from a git repository",
+          ),
+        );
         process.exit(1);
       }
       targetDir = projectRoot;

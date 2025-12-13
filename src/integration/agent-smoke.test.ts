@@ -45,7 +45,7 @@ async function createModule(
   name: string,
   description: string,
   triggers: string[] | undefined,
-  readme: string
+  readme: string,
 ) {
   const moduleDir = path.join(root, slug);
   await fs.mkdir(moduleDir, { recursive: true });
@@ -53,25 +53,30 @@ async function createModule(
   const manifestLines = [
     `name = "${name}"`,
     `description = "${description}"`,
-    "prompt = \"README.md\"",
+    'prompt = "README.md"',
   ];
 
   if (triggers && triggers.length > 0) {
     manifestLines.push("");
     manifestLines.push("[triggers]");
     manifestLines.push(
-      `user-msg = [${triggers.map((t) => `"${t}"`).join(", ")}]`
+      `user-msg = [${triggers.map((t) => `"${t}"`).join(", ")}]`,
     );
   }
 
   manifestLines.push("");
 
-  await fs.writeFile(path.join(moduleDir, "openmodule.toml"), manifestLines.join("\n"));
+  await fs.writeFile(
+    path.join(moduleDir, "openmodule.toml"),
+    manifestLines.join("\n"),
+  );
   await fs.writeFile(path.join(moduleDir, "README.md"), readme);
 }
 
 async function setupTestDir(): Promise<TestContext> {
-  const testDir = await fs.mkdtemp(path.join(os.tmpdir(), "openmodules-smoke-"));
+  const testDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), "openmodules-smoke-"),
+  );
   const opencodeDir = path.join(testDir, ".opencode");
   const pluginDir = path.join(opencodeDir, "plugin");
   const repoRoot = path.resolve(import.meta.dir, "..", "..");
@@ -92,7 +97,7 @@ async function setupTestDir(): Promise<TestContext> {
   await fs.mkdir(opencodeDir, { recursive: true });
   await fs.writeFile(
     path.join(opencodeDir, "opencode.json"),
-    '{"$schema":"https://opencode.ai/config.json"}\n'
+    '{"$schema":"https://opencode.ai/config.json"}\n',
   );
 
   // Synthetic module set
@@ -103,7 +108,7 @@ async function setupTestDir(): Promise<TestContext> {
     "Always-on helper module",
     "Helper module that is always available without triggers.",
     undefined,
-    "Always-on helper module."
+    "Always-on helper module.",
   );
   await createModule(
     modulesRoot,
@@ -111,7 +116,7 @@ async function setupTestDir(): Promise<TestContext> {
     "Documentation style guidance module",
     "Documentation style guide with docstring triggers for activation.",
     ["docstring{s,}", "documentation"],
-    "Doc style guidance README."
+    "Doc style guidance README.",
   );
   await createModule(
     modulesRoot,
@@ -119,7 +124,7 @@ async function setupTestDir(): Promise<TestContext> {
     "PDF document processing helper",
     "Helper for PDF document extraction and processing.",
     [".pdf", "pdf file", "pdf document"],
-    "PDF processing helper README."
+    "PDF processing helper README.",
   );
 
   if (!(await pathExists(pluginPath))) {
@@ -135,7 +140,7 @@ async function cleanup(ctx: TestContext) {
 
 async function runOpencode(
   cwd: string,
-  prompt: string
+  prompt: string,
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const proc = spawn({
     cmd: ["opencode", "run", "--model", OPENCODE_MODEL, prompt],
@@ -164,7 +169,7 @@ describe.skipIf(!shouldRun)("openmodules agent smoke", () => {
       try {
         const first = await runOpencode(
           ctx.testDir,
-          "Reply only with the openmodule_ tools you can see right now."
+          "Reply only with the openmodule_ tools you can see right now.",
         );
 
         expect(first.exitCode, first.stderr || first.stdout).toBe(0);
@@ -174,7 +179,7 @@ describe.skipIf(!shouldRun)("openmodules agent smoke", () => {
 
         const second = await runOpencode(
           ctx.testDir,
-          "I need documentation and docstrings. Reply only with the openmodule_ tools you can see."
+          "I need documentation and docstrings. Reply only with the openmodule_ tools you can see.",
         );
 
         expect(second.exitCode, second.stderr || second.stdout).toBe(0);
@@ -184,7 +189,7 @@ describe.skipIf(!shouldRun)("openmodules agent smoke", () => {
 
         const third = await runOpencode(
           ctx.testDir,
-          "I have some .pdf files to process. Reply only with the openmodule_ tools you can see."
+          "I have some .pdf files to process. Reply only with the openmodule_ tools you can see.",
         );
 
         expect(third.exitCode, third.stderr || third.stdout).toBe(0);
@@ -194,6 +199,6 @@ describe.skipIf(!shouldRun)("openmodules agent smoke", () => {
         await cleanup(ctx);
       }
     },
-    TEST_TIMEOUT
+    TEST_TIMEOUT,
   );
 });

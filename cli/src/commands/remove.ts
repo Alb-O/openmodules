@@ -47,8 +47,8 @@ export const remove = command({
         const relativePath = path.relative(projectRoot, targetDir);
         // git config --file .gitmodules --get-regexp returns entries for submodule paths
         const result = execSync(
-          `git config --file .gitmodules --get-regexp "submodule\\..*\\.path" | grep -E "\\s${relativePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$"`,
-          { cwd: projectRoot, stdio: "pipe", encoding: "utf-8" }
+          `git config --file .gitmodules --get-regexp "submodule\\..*\\.path" | grep -E "\\s${relativePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$"`,
+          { cwd: projectRoot, stdio: "pipe", encoding: "utf-8" },
         );
         isSubmodule = result.trim().length > 0;
       } catch {
@@ -72,8 +72,10 @@ export const remove = command({
 
       const answer = await new Promise<string>((resolve) => {
         rl.question(
-          pc.yellow(`Remove ${name}${isSubmodule ? " (submodule)" : ""}? [y/N] `),
-          resolve
+          pc.yellow(
+            `Remove ${name}${isSubmodule ? " (submodule)" : ""}? [y/N] `,
+          ),
+          resolve,
         );
       });
       rl.close();
@@ -96,7 +98,12 @@ export const remove = command({
           stdio: "inherit",
         });
         // Clean up .git/modules
-        const gitModulesPath = path.join(projectRoot, ".git", "modules", relativePath);
+        const gitModulesPath = path.join(
+          projectRoot,
+          ".git",
+          "modules",
+          relativePath,
+        );
         if (fs.existsSync(gitModulesPath)) {
           fs.rmSync(gitModulesPath, { recursive: true, force: true });
         }
@@ -106,7 +113,8 @@ export const remove = command({
         console.log(pc.green(`✓ Removed: ${name}`));
       }
     } catch (error: any) {
-      const errorMessage = error?.message || error?.stderr?.toString() || String(error);
+      const errorMessage =
+        error?.message || error?.stderr?.toString() || String(error);
       console.error(pc.red("Failed to remove module:"));
       console.error(pc.dim(errorMessage));
       process.exit(1);

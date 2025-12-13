@@ -29,17 +29,18 @@ export function getBundledPluginPath(): string | null {
   return null;
 }
 
-
 /**
  * Install plugin by copying to target directory.
  */
 export function installPlugin(
   targetDir: string,
-  options?: { force?: boolean }
+  options?: { force?: boolean },
 ): { installed: boolean; path: string } | { error: string } {
   const bundledPath = getBundledPluginPath();
   if (!bundledPath) {
-    return { error: "Could not find bundled plugin. Is the CLI properly installed?" };
+    return {
+      error: "Could not find bundled plugin. Is the CLI properly installed?",
+    };
   }
 
   const bundledContent = fs.readFileSync(bundledPath);

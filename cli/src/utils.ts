@@ -49,9 +49,13 @@ const DOMAIN_ALIASES: Record<string, string> = {
   srht: "git.sr.ht",
 };
 
-export function parseRepoUrl(input: string): { owner: string; repo: string; url: string } | null {
+export function parseRepoUrl(
+  input: string,
+): { owner: string; repo: string; url: string } | null {
   // Handle full URLs (https or git@)
-  const urlMatch = input.match(/(?:https?:\/\/|git@)([^/:]+)[/:]([^/]+)\/([^/.\s]+)/);
+  const urlMatch = input.match(
+    /(?:https?:\/\/|git@)([^/:]+)[/:]([^/]+)\/([^/.\s]+)/,
+  );
   if (urlMatch) {
     const domain = urlMatch[1];
     const owner = urlMatch[2];

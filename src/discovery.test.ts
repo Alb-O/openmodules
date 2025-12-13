@@ -38,11 +38,19 @@ describe("discovery", () => {
       const projectDir = path.join(tempDir, "project");
       const sharedName = "shared-module";
 
-      await createModule(path.join(configDir, sharedName), sharedName, "Config description is long enough.");
-      await createModule(path.join(projectDir, sharedName), sharedName, "Project description is even longer for testing.");
+      await createModule(
+        path.join(configDir, sharedName),
+        sharedName,
+        "Config description is long enough.",
+      );
+      await createModule(
+        path.join(projectDir, sharedName),
+        sharedName,
+        "Project description is even longer for testing.",
+      );
 
       await expect(discoverModules([configDir, projectDir])).rejects.toThrow(
-        /Duplicate tool names detected/
+        /Duplicate tool names detected/,
       );
     });
   });

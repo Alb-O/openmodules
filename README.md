@@ -7,6 +7,7 @@ When a module tool is invoked, the plugin injects the module content into the se
 ## Design Philosophy
 
 Each openmodule is a standalone git repository. This enables:
+
 - Version control and history for each module
 - Easy sharing via `git clone` or `git submodule add`
 - Independent versioning and updates

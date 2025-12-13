@@ -115,7 +115,11 @@ echo "hello"
   });
 
   it("cleans surrounding quotes", () => {
-    expect(extractOneliner(`# oneliner: "Quoted description"`)).toBe("Quoted description");
-    expect(extractOneliner(`# oneliner: 'Single quoted'`)).toBe("Single quoted");
+    expect(extractOneliner(`# oneliner: "Quoted description"`)).toBe(
+      "Quoted description",
+    );
+    expect(extractOneliner(`# oneliner: 'Single quoted'`)).toBe(
+      "Single quoted",
+    );
   });
 });

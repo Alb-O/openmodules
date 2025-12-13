@@ -37,7 +37,12 @@
     "@types/bun": "^1.3",
     "typescript": "^5"
   },
-  "keywords": ["opencode", "plugin", "modules", "anthropic"],
+  "keywords": [
+    "opencode",
+    "plugin",
+    "modules",
+    "anthropic"
+  ],
   "license": "MIT",
   "publishConfig": {
     "access": "public"

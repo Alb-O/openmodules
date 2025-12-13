@@ -12,11 +12,21 @@ import { getCacheDir, formatBytes, getDirSize } from "./index";
  */
 export function urlToCachePath(url: string): string {
   // Normalize URL to extract domain/owner/repo
-  const match = url.match(/(?:https?:\/\/|git@)([^/:]+)[/:]([^/]+)\/([^/]+?)(?:\.git)?$/);
+  const match = url.match(
+    /(?:https?:\/\/|git@)([^/:]+)[/:]([^/]+)\/([^/]+?)(?:\.git)?$/,
+  );
   if (!match) {
     // Fallback to hash-based path for unusual URLs
-    const hash = crypto.createHash("sha256").update(url).digest("hex").slice(0, 16);
-    console.warn(pc.yellow(`Warning: Non-standard URL format, using hash-based cache path for: ${url}`));
+    const hash = crypto
+      .createHash("sha256")
+      .update(url)
+      .digest("hex")
+      .slice(0, 16);
+    console.warn(
+      pc.yellow(
+        `Warning: Non-standard URL format, using hash-based cache path for: ${url}`,
+      ),
+    );
     return path.join(getCacheDir(), "repos", "other", `${hash}.git`);
   }
 
@@ -37,9 +47,14 @@ export function isCached(url: string): boolean {
  * Returns the path to the cached bare repo.
  * Throws if fetch/clone fails with actionable error message.
  */
-export function ensureCached(url: string, options?: { quiet?: boolean }): string {
+export function ensureCached(
+  url: string,
+  options?: { quiet?: boolean },
+): string {
   const cachePath = urlToCachePath(url);
-  const quiet = options?.quiet ? { stdio: "pipe" as const } : { stdio: "inherit" as const };
+  const quiet = options?.quiet
+    ? { stdio: "pipe" as const }
+    : { stdio: "inherit" as const };
 
   if (fs.existsSync(cachePath)) {
     // Update existing cache
@@ -50,7 +65,8 @@ export function ensureCached(url: string, options?: { quiet?: boolean }): string
       });
     } catch (error: any) {
       // Fetch failed - warn but continue with stale cache
-      const errorMsg = error?.stderr?.toString() || error?.message || "Unknown error";
+      const errorMsg =
+        error?.stderr?.toString() || error?.message || "Unknown error";
       console.warn(pc.yellow(`Warning: Failed to update cache for ${url}`));
       console.warn(pc.dim(`  ${errorMsg.trim()}`));
       console.warn(pc.dim("  Using potentially stale cached version"));
@@ -64,8 +80,11 @@ export function ensureCached(url: string, options?: { quiet?: boolean }): string
     try {
       execSync(`git clone --bare ${url} ${cachePath}`, quiet);
     } catch (error: any) {
-      const errorMsg = error?.stderr?.toString() || error?.message || "Unknown error";
-      throw new Error(`Failed to clone ${url} into cache:\n  ${errorMsg.trim()}`);
+      const errorMsg =
+        error?.stderr?.toString() || error?.message || "Unknown error";
+      throw new Error(
+        `Failed to clone ${url} into cache:\n  ${errorMsg.trim()}`,
+      );
     }
   }
 
@@ -75,9 +94,15 @@ export function ensureCached(url: string, options?: { quiet?: boolean }): string
 /**
  * Clone from cache using --reference for object sharing.
  */
-export function cloneFromCache(url: string, targetDir: string, options?: { quiet?: boolean }): void {
+export function cloneFromCache(
+  url: string,
+  targetDir: string,
+  options?: { quiet?: boolean },
+): void {
   const cachePath = ensureCached(url, options);
-  const quiet = options?.quiet ? { stdio: "pipe" as const } : { stdio: "inherit" as const };
+  const quiet = options?.quiet
+    ? { stdio: "pipe" as const }
+    : { stdio: "inherit" as const };
 
   execSync(`git clone --reference ${cachePath} ${url} ${targetDir}`, quiet);
 }
@@ -89,10 +114,12 @@ export function submoduleAddFromCache(
   url: string,
   relativePath: string,
   projectRoot: string,
-  options?: { quiet?: boolean; force?: boolean }
+  options?: { quiet?: boolean; force?: boolean },
 ): void {
   const cachePath = ensureCached(url, options);
-  const quiet = options?.quiet ? { stdio: "pipe" as const } : { stdio: "inherit" as const };
+  const quiet = options?.quiet
+    ? { stdio: "pipe" as const }
+    : { stdio: "inherit" as const };
   const forceFlag = options?.force ? "--force " : "";
 
   execSync(
@@ -100,7 +127,7 @@ export function submoduleAddFromCache(
     {
       cwd: projectRoot,
       ...quiet,
-    }
+    },
   );
 
   // Initialize the submodule
@@ -117,7 +144,11 @@ export function submoduleAddFromCache(
 /**
  * List all cached repos.
  */
-export function listCachedRepos(): Array<{ path: string; url: string; size: number }> {
+export function listCachedRepos(): Array<{
+  path: string;
+  url: string;
+  size: number;
+}> {
   const reposDir = path.join(getCacheDir(), "repos");
   const results: Array<{ path: string; url: string; size: number }> = [];
 

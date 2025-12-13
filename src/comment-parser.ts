@@ -9,7 +9,7 @@ const ONELINER_MARKER = "oneliner:";
 /**
  * Extract the oneliner description from the top of a file.
  * Looks for "oneliner:" anywhere in the first few lines and extracts the rest of that line.
- * 
+ *
  * @example
  * // oneliner: Database backup utilities
  * # oneliner: Helper functions for API calls
@@ -23,15 +23,17 @@ export function extractOneliner(content: string): string | null {
     const markerIndex = line.toLowerCase().indexOf(ONELINER_MARKER);
     if (markerIndex !== -1) {
       // Extract everything after "oneliner:"
-      const afterMarker = line.slice(markerIndex + ONELINER_MARKER.length).trim();
-      
+      const afterMarker = line
+        .slice(markerIndex + ONELINER_MARKER.length)
+        .trim();
+
       // Clean up common trailing comment syntax
       const cleaned = afterMarker
-        .replace(/\s*-->$/, "")      // HTML comment end
-        .replace(/\s*\*\/$/, "")     // Block comment end
-        .replace(/\s*"""$/, "")      // Python docstring end
-        .replace(/\s*'''$/, "")      // Python docstring end
-        .replace(/\s*]]$/, "")       // Lua block comment end
+        .replace(/\s*-->$/, "") // HTML comment end
+        .replace(/\s*\*\/$/, "") // Block comment end
+        .replace(/\s*"""$/, "") // Python docstring end
+        .replace(/\s*'''$/, "") // Python docstring end
+        .replace(/\s*]]$/, "") // Lua block comment end
         .replace(/^["']|["']$/g, "") // Surrounding quotes
         .trim();
 

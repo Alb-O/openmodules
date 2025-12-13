@@ -34,7 +34,9 @@ describe("generateFileTree", () => {
 
   it("excludes node_modules by default", async () => {
     const moduleDir = path.join(tempDir, "exclude-test");
-    await fs.mkdir(path.join(moduleDir, "node_modules", "some-pkg"), { recursive: true });
+    await fs.mkdir(path.join(moduleDir, "node_modules", "some-pkg"), {
+      recursive: true,
+    });
     await fs.mkdir(path.join(moduleDir, "src"), { recursive: true });
     await fs.writeFile(path.join(moduleDir, "src", "index.ts"), "export {}");
 
@@ -46,8 +48,13 @@ describe("generateFileTree", () => {
 
   it("respects maxDepth option", async () => {
     const moduleDir = path.join(tempDir, "depth-test");
-    await fs.mkdir(path.join(moduleDir, "a", "b", "c", "d"), { recursive: true });
-    await fs.writeFile(path.join(moduleDir, "a", "b", "c", "d", "deep.ts"), "export {}");
+    await fs.mkdir(path.join(moduleDir, "a", "b", "c", "d"), {
+      recursive: true,
+    });
+    await fs.writeFile(
+      path.join(moduleDir, "a", "b", "c", "d", "deep.ts"),
+      "export {}",
+    );
 
     const tree = await generateFileTree(moduleDir, { maxDepth: 2 });
 
@@ -65,7 +72,10 @@ describe("generateFileTree", () => {
     await fs.mkdir(path.join(moduleDir, "secrets"), { recursive: true });
     await fs.writeFile(path.join(moduleDir, "README.md"), "# Readme");
     await fs.writeFile(path.join(moduleDir, "src", "index.ts"), "export {}");
-    await fs.writeFile(path.join(moduleDir, "secrets", "api-key.txt"), "secret");
+    await fs.writeFile(
+      path.join(moduleDir, "secrets", "api-key.txt"),
+      "secret",
+    );
     await fs.writeFile(path.join(moduleDir, "debug.log"), "logs");
     // Create .ignore file
     await fs.writeFile(path.join(moduleDir, ".ignore"), "secrets/\n*.log\n");
@@ -83,9 +93,15 @@ describe("generateFileTree", () => {
     const moduleDir = path.join(tempDir, "ignore-negation-test");
     await fs.mkdir(path.join(moduleDir, "logs"), { recursive: true });
     await fs.writeFile(path.join(moduleDir, "logs", "debug.log"), "debug");
-    await fs.writeFile(path.join(moduleDir, "logs", "important.log"), "important");
+    await fs.writeFile(
+      path.join(moduleDir, "logs", "important.log"),
+      "important",
+    );
     // Ignore all logs except important.log
-    await fs.writeFile(path.join(moduleDir, ".ignore"), "logs/*.log\n!logs/important.log\n");
+    await fs.writeFile(
+      path.join(moduleDir, ".ignore"),
+      "logs/*.log\n!logs/important.log\n",
+    );
 
     const tree = await generateFileTree(moduleDir);
 
@@ -113,7 +129,7 @@ describe("generateFileTree", () => {
 # oneliner: Database backup utilities
 
 echo "Backing up..."
-`
+`,
       );
       await fs.writeFile(
         path.join(moduleDir, "process.py"),
@@ -121,7 +137,7 @@ echo "Backing up..."
 # oneliner: Data processing module
 
 import sys
-`
+`,
       );
 
       const tree = await generateFileTree(moduleDir, { includeMetadata: true });
@@ -140,10 +156,12 @@ import sys
         `#!/bin/bash
 # oneliner: My Script
 echo "Hello"
-`
+`,
       );
 
-      const tree = await generateFileTree(moduleDir, { includeMetadata: false });
+      const tree = await generateFileTree(moduleDir, {
+        includeMetadata: false,
+      });
 
       expect(tree).toContain(path.join(moduleDir, "script.sh"));
       expect(tree).not.toContain("# My Script");
@@ -157,7 +175,7 @@ echo "Hello"
         `#!/bin/bash
 # oneliner: Has Metadata
 echo "hi"
-`
+`,
       );
       await fs.writeFile(path.join(moduleDir, "no-meta.txt"), "Just text");
 
@@ -172,8 +190,14 @@ echo "hi"
       const moduleDir = path.join(tempDir, "dir-oneliner-test");
       const subDir = path.join(moduleDir, "utils");
       await fs.mkdir(subDir, { recursive: true });
-      await fs.writeFile(path.join(subDir, ".oneliner"), "Utility functions for data processing");
-      await fs.writeFile(path.join(subDir, "helper.sh"), "#!/bin/bash\necho hi");
+      await fs.writeFile(
+        path.join(subDir, ".oneliner"),
+        "Utility functions for data processing",
+      );
+      await fs.writeFile(
+        path.join(subDir, "helper.sh"),
+        "#!/bin/bash\necho hi",
+      );
 
       const tree = await generateFileTree(moduleDir, { includeMetadata: true });
 
@@ -185,7 +209,10 @@ echo "hi"
       const moduleDir = path.join(tempDir, "dir-oneliner-txt-test");
       const subDir = path.join(moduleDir, "scripts");
       await fs.mkdir(subDir, { recursive: true });
-      await fs.writeFile(path.join(subDir, ".oneliner.txt"), "Shell scripts for automation");
+      await fs.writeFile(
+        path.join(subDir, ".oneliner.txt"),
+        "Shell scripts for automation",
+      );
       await fs.writeFile(path.join(subDir, "run.sh"), "#!/bin/bash\necho run");
 
       const tree = await generateFileTree(moduleDir, { includeMetadata: true });
@@ -199,7 +226,10 @@ echo "hi"
       const subDir = path.join(moduleDir, "lib");
       await fs.mkdir(subDir, { recursive: true });
       await fs.writeFile(path.join(subDir, ".oneliner"), "From .oneliner");
-      await fs.writeFile(path.join(subDir, ".oneliner.txt"), "From .oneliner.txt");
+      await fs.writeFile(
+        path.join(subDir, ".oneliner.txt"),
+        "From .oneliner.txt",
+      );
 
       const tree = await generateFileTree(moduleDir, { includeMetadata: true });
 
@@ -211,7 +241,10 @@ echo "hi"
       const moduleDir = path.join(tempDir, "hide-oneliner-test");
       await fs.mkdir(moduleDir, { recursive: true });
       await fs.writeFile(path.join(moduleDir, ".oneliner"), "Description");
-      await fs.writeFile(path.join(moduleDir, ".oneliner.txt"), "Description txt");
+      await fs.writeFile(
+        path.join(moduleDir, ".oneliner.txt"),
+        "Description txt",
+      );
       await fs.writeFile(path.join(moduleDir, "script.sh"), "#!/bin/bash");
 
       const tree = await generateFileTree(moduleDir, { includeMetadata: true });

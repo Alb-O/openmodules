@@ -8,6 +8,9 @@
     bun2nix.url = "github:baileyluTCD/bun2nix?tag=1.5.2";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
     bun2nix.inputs.systems.follows = "systems";
+
+    treefmt-nix.url = "github:numtide/treefmt-nix";
+    treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   nixConfig = {
@@ -27,11 +30,13 @@
       nixpkgs,
       systems,
       bun2nix,
+      treefmt-nix,
       ...
     }:
     let
       eachSystem = nixpkgs.lib.genAttrs (import systems);
       pkgsFor = eachSystem (system: import nixpkgs { inherit system; });
+      fmtLib = import ./nix/fmt { inherit treefmt-nix; };
     in
     {
       packages = eachSystem (system: rec {
@@ -75,6 +80,15 @@
               (cd cli && bun install --frozen-lockfile)
             fi
           '';
+        };
+      });
+
+      formatter = eachSystem (system: fmtLib.make { pkgs = pkgsFor.${system}; });
+
+      checks = eachSystem (system: {
+        formatting = fmtLib.check {
+          pkgs = pkgsFor.${system};
+          self = self;
         };
       });
     };

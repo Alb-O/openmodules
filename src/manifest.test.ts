@@ -35,7 +35,12 @@ describe("manifest", () => {
   describe("generateToolName", () => {
     it("generates tool names by flattening directories with underscores", () => {
       const baseDir = path.join(tempDir, ".openmodules");
-      const manifestPath = path.join(baseDir, "docs", "api-guides", "openmodule.toml");
+      const manifestPath = path.join(
+        baseDir,
+        "docs",
+        "api-guides",
+        "openmodule.toml",
+      );
       const toolName = generateToolName(manifestPath, baseDir);
 
       expect(toolName).toBe("openmodule_docs_api_guides");
@@ -58,12 +63,29 @@ describe("manifest", () => {
       const baseDir = path.join(tempDir, ".openmodules");
 
       const parentPath = path.join(baseDir, "parent-mod", "openmodule.toml");
-      const childPath = path.join(baseDir, "parent-mod", "child-mod", "openmodule.toml");
-      const grandchildPath = path.join(baseDir, "parent-mod", "child-mod", "grandchild-mod", "openmodule.toml");
+      const childPath = path.join(
+        baseDir,
+        "parent-mod",
+        "child-mod",
+        "openmodule.toml",
+      );
+      const grandchildPath = path.join(
+        baseDir,
+        "parent-mod",
+        "child-mod",
+        "grandchild-mod",
+        "openmodule.toml",
+      );
 
-      expect(generateToolName(parentPath, baseDir)).toBe("openmodule_parent_mod");
-      expect(generateToolName(childPath, baseDir)).toBe("openmodule_parent_mod_child_mod");
-      expect(generateToolName(grandchildPath, baseDir)).toBe("openmodule_parent_mod_child_mod_grandchild_mod");
+      expect(generateToolName(parentPath, baseDir)).toBe(
+        "openmodule_parent_mod",
+      );
+      expect(generateToolName(childPath, baseDir)).toBe(
+        "openmodule_parent_mod_child_mod",
+      );
+      expect(generateToolName(grandchildPath, baseDir)).toBe(
+        "openmodule_parent_mod_child_mod_grandchild_mod",
+      );
     });
   });
 });

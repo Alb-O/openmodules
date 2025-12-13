@@ -4,13 +4,16 @@ import { buildContextTriggerMatchers, compileContextTrigger } from "./triggers";
 import type { Module } from "./types";
 
 describe("triggers", () => {
-  const matches = (regexes: RegExp[], text: string) => regexes.some((regex) => regex.test(text));
+  const matches = (regexes: RegExp[], text: string) =>
+    regexes.some((regex) => regex.test(text));
 
   describe("compileContextTrigger", () => {
     it("supports brace expansion and word boundaries", () => {
       const regexes = compileContextTrigger("docstring{s,}");
 
-      expect(matches(regexes, "Please add a docstring for this function")).toBe(true);
+      expect(matches(regexes, "Please add a docstring for this function")).toBe(
+        true,
+      );
       expect(matches(regexes, "Multiple docstrings_are needed")).toBe(true);
       expect(matches(regexes, "docstringing everything")).toBe(false);
     });
@@ -52,7 +55,9 @@ describe("triggers", () => {
 
       const text = "Need docstrings for this module";
       const triggered = matchers
-        .filter((matcher) => matcher.userMsgRegexes.some((regex) => regex.test(text)))
+        .filter((matcher) =>
+          matcher.userMsgRegexes.some((regex) => regex.test(text)),
+        )
         .map((matcher) => matcher.toolName);
 
       expect(triggered).toContain("openmodule_docs");
@@ -91,9 +96,15 @@ describe("triggers", () => {
 
       const matchers = buildContextTriggerMatchers(modules);
 
-      const fileDetector = matchers.find((m) => m.toolName === "openmodule_file_detector");
-      const userOnly = matchers.find((m) => m.toolName === "openmodule_user_only");
-      const agentOnly = matchers.find((m) => m.toolName === "openmodule_agent_only");
+      const fileDetector = matchers.find(
+        (m) => m.toolName === "openmodule_file_detector",
+      );
+      const userOnly = matchers.find(
+        (m) => m.toolName === "openmodule_user_only",
+      );
+      const agentOnly = matchers.find(
+        (m) => m.toolName === "openmodule_agent_only",
+      );
 
       expect(fileDetector?.anyMsgRegexes.length).toBeGreaterThan(0);
       expect(fileDetector?.userMsgRegexes.length).toBe(0);
@@ -144,7 +155,11 @@ describe("triggers", () => {
       // Simulate message parts: user text is non-synthetic, agent text is synthetic
       const parts = [
         { type: "text", text: "What files do you see?", synthetic: false }, // user
-        { type: "text", text: "I found a detected pattern in the output", synthetic: true }, // agent
+        {
+          type: "text",
+          text: "I found a detected pattern in the output",
+          synthetic: true,
+        }, // agent
       ];
 
       // Extract text like the hook does
@@ -221,7 +236,11 @@ describe("triggers", () => {
       const matchers = buildContextTriggerMatchers(modules);
 
       const parts = [
-        { type: "text", text: "Please handle this user phrase for me", synthetic: false },
+        {
+          type: "text",
+          text: "Please handle this user phrase for me",
+          synthetic: false,
+        },
       ];
 
       const userText = parts

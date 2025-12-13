@@ -1,4 +1,11 @@
-import { command, subcommands, flag, positional, string, optional } from "cmd-ts";
+import {
+  command,
+  subcommands,
+  flag,
+  positional,
+  string,
+  optional,
+} from "cmd-ts";
 import pc from "picocolors";
 import {
   getCacheDir,
@@ -33,7 +40,9 @@ const list = command({
     }
 
     console.log("");
-    console.log(pc.dim(`Total: ${cached.length} repos, ${formatBytes(totalSize)}`));
+    console.log(
+      pc.dim(`Total: ${cached.length} repos, ${formatBytes(totalSize)}`),
+    );
     console.log(pc.dim(`Cache directory: ${getCacheDir()}`));
   },
 });
@@ -67,8 +76,10 @@ const clear = command({
 
       const answer = await new Promise<string>((resolve) => {
         rl.question(
-          pc.yellow(`Clear ${cached.length} cached repos (${formatBytes(totalSize)})? [y/N] `),
-          resolve
+          pc.yellow(
+            `Clear ${cached.length} cached repos (${formatBytes(totalSize)})? [y/N] `,
+          ),
+          resolve,
         );
       });
       rl.close();
@@ -80,7 +91,9 @@ const clear = command({
     }
 
     clearRepoCache();
-    console.log(pc.green(`✓ Cleared ${cached.length} repos (${formatBytes(totalSize)})`));
+    console.log(
+      pc.green(`✓ Cleared ${cached.length} repos (${formatBytes(totalSize)})`),
+    );
   },
 });
 

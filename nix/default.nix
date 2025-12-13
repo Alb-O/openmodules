@@ -12,7 +12,18 @@ bun2nix.mkDerivation {
   bunDeps = bun2nix.fetchBunDeps {
     inherit bunNix;
   };
-  bunBuildFlags = [ "./src/index.ts" "--outfile" "./dist/openmodules.bundle.js" "--target" "node" "--minify" "--external" "zod" "--external" "@opencode-ai/plugin" ];
+  bunBuildFlags = [
+    "./src/index.ts"
+    "--outfile"
+    "./dist/openmodules.bundle.js"
+    "--target"
+    "node"
+    "--minify"
+    "--external"
+    "zod"
+    "--external"
+    "@opencode-ai/plugin"
+  ];
   installPhase = ''
     runHook preInstall
     mkdir -p $out

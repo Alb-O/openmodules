@@ -67,7 +67,7 @@ function parseModuleToml(tomlPath: string): {
 function scanModulesRecursive(
   dir: string,
   scope: "global" | "local",
-  depth = 0
+  depth = 0,
 ): ModuleInfo[] {
   const modules: ModuleInfo[] = [];
 
@@ -133,7 +133,7 @@ function getTriggerSummary(triggers?: ModuleInfo["triggers"]): string {
 function printModuleTree(
   modules: ModuleInfo[],
   prefix = "",
-  isLast = true
+  isLast = true,
 ): void {
   for (let i = 0; i < modules.length; i++) {
     const mod = modules[i];
@@ -168,7 +168,9 @@ function printModuleTree(
       warning = pc.red(` (parse error: ${mod.parseError})`);
     }
 
-    console.log(`${prefix}${connector} ${nameDisplay}${descDisplay}${triggerPart}${warning}`);
+    console.log(
+      `${prefix}${connector} ${nameDisplay}${descDisplay}${triggerPart}${warning}`,
+    );
 
     // Print children with updated prefix
     if (mod.children.length > 0) {
@@ -178,10 +180,7 @@ function printModuleTree(
 }
 
 function countModules(modules: ModuleInfo[]): number {
-  return modules.reduce(
-    (sum, m) => sum + 1 + countModules(m.children),
-    0
-  );
+  return modules.reduce((sum, m) => sum + 1 + countModules(m.children), 0);
 }
 
 export const list = command({
@@ -226,7 +225,7 @@ export const list = command({
       console.log(pc.dim("No modules installed"));
       if (!projectRoot && !globalOnly) {
         console.log(
-          pc.dim("(Not in a project directory - showing global modules only)")
+          pc.dim("(Not in a project directory - showing global modules only)"),
         );
       }
       return;
@@ -246,7 +245,7 @@ export const list = command({
       console.log(
         pc.bold("🌐 Global modules") +
           pc.dim(` (${shortenPath(paths.global)})`) +
-          pc.dim(` — ${totalGlobal} module${totalGlobal === 1 ? "" : "s"}`)
+          pc.dim(` — ${totalGlobal} module${totalGlobal === 1 ? "" : "s"}`),
       );
       if (flat) {
         const flatList = flatten(globalModules);
@@ -265,7 +264,7 @@ export const list = command({
       console.log(
         pc.bold("📁 Local modules") +
           pc.dim(` (${shortenPath(paths.local!)})`) +
-          pc.dim(` — ${totalLocal} module${totalLocal === 1 ? "" : "s"}`)
+          pc.dim(` — ${totalLocal} module${totalLocal === 1 ? "" : "s"}`),
       );
       if (flat) {
         const flatList = flatten(localModules);
