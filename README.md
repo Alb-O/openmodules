@@ -188,3 +188,66 @@ docs/
 ```
 
 When a user mentions "documentation", the parent `docs` module becomes visible. If they then mention "api", the `docs/api` child module also becomes visible. The `tutorials` module remains hidden until its trigger matches.
+
+## Wrapping External Repositories
+
+The `engram wrap` command creates engrams from external repositories with sparse-checkout support. This is useful for pulling in documentation or reference material from third-party projects.
+
+### Basic Usage
+
+```bash
+# Wrap a repo with sparse-checkout (only docs)
+engram wrap oven-sh/bun --name "Bun Docs" --sparse 'docs/**/*.md'
+
+# Wrap with multiple patterns
+engram wrap cli/cli --sparse 'docs/**/*.md' --sparse '*.md' --as gh-cli
+
+# Wrap a specific ref (branch, tag, or commit)
+engram wrap owner/repo --ref v1.0.0 --sparse 'docs/**'
+```
+
+### Lazy Mode
+
+For version control, use `--lazy` to create just the manifest without cloning. The content is fetched on first use:
+
+```bash
+# Create manifest only (no clone)
+engram wrap oven-sh/bun --name "Bun Docs" --sparse 'docs/**/*.md' --lazy
+
+# Later, initialize the content
+engram lazy-init bun
+```
+
+Lazy engrams commit only the manifest files to git. The cloned content is gitignored and fetched on demand.
+
+### Structure
+
+Wrapped engrams use a `content/` subdirectory for cloned content, keeping manifest files separate:
+
+```
+.engrams/bun/
+├── engram.toml     # Tracked by your project's git
+├── README.md       # Tracked by your project's git
+├── .gitignore      # Ignores content/ (lazy mode only)
+└── content/        # The cloned repo lives here
+    ├── .git/
+    └── docs/
+```
+
+### Wrap Configuration
+
+The manifest includes a `[wrap]` section for lazy initialization:
+
+```toml
+name = "Bun Docs"
+version = "1.0.0"
+description = "Documentation from oven-sh/bun"
+
+[wrap]
+remote = "https://github.com/oven-sh/bun.git"
+ref = "main"
+sparse = ["docs/**/*.md"]
+
+[triggers]
+user-msg = ["bun", "bunx"]
+```
