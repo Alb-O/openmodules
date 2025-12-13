@@ -90,26 +90,12 @@ function parseEngramToml(tomlPath: string): {
 }
 
 /**
- * Check if a wrapped engram has content beyond manifest files.
- * Returns true if content exists, false if only manifest files.
+ * Check if a wrapped engram has been initialized.
+ * Returns true if content/ directory exists (where cloned repos live).
  */
 function isWrappedEngramInitialized(engramPath: string): boolean {
-  try {
-    const entries = fs.readdirSync(engramPath);
-    // Manifest files that don't count as "content"
-    const manifestFiles = new Set([
-      ".gitignore",
-      ".ignore",
-      "engram.toml",
-      "README.md",
-      ".oneliner",
-      ".oneliner.txt",
-    ]);
-    // Content exists if there's .git (cloned), content/ (reorganized), or other non-manifest entries
-    return entries.some(e => !manifestFiles.has(e));
-  } catch {
-    return false;
-  }
+  const contentDir = path.join(engramPath, "content");
+  return fs.existsSync(contentDir);
 }
 
 function scanEngramsRecursive(

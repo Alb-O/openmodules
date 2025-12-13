@@ -5,8 +5,11 @@ import * as path from "path";
 import pc from "picocolors";
 import { getModulePaths, findProjectRoot, parseRepoUrl, getEngramName } from "../utils";
 
-/** Files that are engram-specific and should stay at root level */
-const MANIFEST_FILES = new Set([
+/** Subdirectory where cloned repo content lives */
+export const CONTENT_DIR = "content";
+
+/** Files that are engram-specific manifest files */
+export const MANIFEST_FILES = new Set([
   "engram.toml",
   "README.md",
   ".gitignore",
@@ -14,50 +17,6 @@ const MANIFEST_FILES = new Set([
   ".oneliner",
   ".oneliner.txt",
 ]);
-
-/**
- * Check if cloned content has any files at root level (not just directories).
- * If so, we need to reorganize into content/ to avoid conflicts.
- */
-function hasRootLevelFiles(dir: string): boolean {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    // Skip manifest files - they're ours
-    if (MANIFEST_FILES.has(entry.name)) continue;
-    // Skip .git directory
-    if (entry.name === ".git") continue;
-    // If it's a file (not directory), we have root-level files
-    if (entry.isFile()) return true;
-  }
-  return false;
-}
-
-/**
- * Reorganize cloned content into content/ subdirectory.
- * Preserves manifest files at root level.
- */
-export function reorganizeIntoContent(dir: string): boolean {
-  if (!hasRootLevelFiles(dir)) {
-    return false; // No reorganization needed
-  }
-
-  const contentDir = path.join(dir, "content");
-  fs.mkdirSync(contentDir, { recursive: true });
-
-  const entries = fs.readdirSync(dir);
-  for (const entry of entries) {
-    // Skip manifest files and the content dir we just created
-    if (MANIFEST_FILES.has(entry) || entry === "content") continue;
-    // Skip .git directory
-    if (entry === ".git") continue;
-
-    const srcPath = path.join(dir, entry);
-    const destPath = path.join(contentDir, entry);
-    fs.renameSync(srcPath, destPath);
-  }
-
-  return true; // Reorganized
-}
 
 /**
  * Clone a repo with optional sparse-checkout and ref.
@@ -106,7 +65,7 @@ function generateReadme(
   name: string,
   description: string,
   repoUrl: string | null,
-  contentPath: string | null,
+  contentPath: string,
 ): string {
   const lines = [`# ${name}`, "", description, ""];
 
@@ -114,23 +73,14 @@ function generateReadme(
     lines.push(`Source: ${repoUrl}`, "");
   }
 
-  if (contentPath) {
-    lines.push(
-      `## Documentation`,
-      "",
-      `This engram provides documentation from the \`${contentPath}/\` directory.`,
-      "",
-      `Use the file tree below to navigate and request specific files.`,
-      "",
-    );
-  } else {
-    lines.push(
-      `## Contents`,
-      "",
-      `Use the file tree below to explore available documentation.`,
-      "",
-    );
-  }
+  lines.push(
+    `## Documentation`,
+    "",
+    `This engram provides documentation from the \`${contentPath}/\` directory.`,
+    "",
+    `Use the file tree below to navigate and request specific files.`,
+    "",
+  );
 
   return lines.join("\n");
 }
@@ -202,26 +152,31 @@ function inferName(source: string): string {
 
 /**
  * Infer content path from sparse patterns or directory structure.
+ * Now always prefixed with content/ since that's where cloned repos live.
  */
-function inferContentPath(patterns: string[], targetDir: string): string | null {
+function inferContentPath(patterns: string[], targetDir: string): string {
+  const contentDir = path.join(targetDir, CONTENT_DIR);
+  
   // If we have sparse patterns, extract the common prefix
   if (patterns.length > 0) {
     const firstPattern = patterns[0];
     const match = firstPattern.match(/^([^*]+)\//);
     if (match) {
-      return match[1];
+      return `${CONTENT_DIR}/${match[1]}`;
     }
   }
 
-  // Look for common documentation directories
-  const docDirs = ["docs", "doc", "documentation", "content"];
-  for (const dir of docDirs) {
-    if (fs.existsSync(path.join(targetDir, dir))) {
-      return dir;
+  // Look for common documentation directories inside content/
+  if (fs.existsSync(contentDir)) {
+    const docDirs = ["docs", "doc", "documentation"];
+    for (const dir of docDirs) {
+      if (fs.existsSync(path.join(contentDir, dir))) {
+        return `${CONTENT_DIR}/${dir}`;
+      }
     }
   }
 
-  return null;
+  return CONTENT_DIR;
 }
 
 export const wrap = command({
@@ -336,7 +291,7 @@ export const wrap = command({
         console.log(pc.blue(`Creating lazy engram for ${parsed!.owner}/${parsed!.repo}...`));
         fs.mkdirSync(targetDir, { recursive: true });
       } else {
-        // Full mode: clone the repo
+        // Full mode: create engram directory and clone into content/
         console.log(pc.blue(`Cloning ${parsed!.owner}/${parsed!.repo}...`));
 
         if (sparse.length > 0) {
@@ -346,12 +301,10 @@ export const wrap = command({
           console.log(pc.dim(`Ref: ${ref}`));
         }
 
-        cloneRepo(parsed!.url, targetDir, { ref, sparse });
-
-        // Check if we need to reorganize content to avoid conflicts
-        if (reorganizeIntoContent(targetDir)) {
-          console.log(pc.dim(`Reorganized content into content/ subdirectory`));
-        }
+        // Create engram directory and clone into content/ subdirectory
+        fs.mkdirSync(targetDir, { recursive: true });
+        const contentDir = path.join(targetDir, CONTENT_DIR);
+        cloneRepo(parsed!.url, contentDir, { ref, sparse });
       }
     } else {
       if (lazy) {

@@ -12,7 +12,7 @@ import {
   isSubmoduleInitialized,
   configureAutoFetch,
 } from "../index-ref";
-import { reorganizeIntoContent } from "./wrap";
+import { CONTENT_DIR, MANIFEST_FILES } from "./wrap";
 
 interface WrapConfig {
   remote: string;
@@ -28,23 +28,13 @@ interface EngramToml {
 
 /**
  * Check if an engram directory has content (is initialized).
- * For wrapped engrams, checks if there's more than just manifest files.
+ * For wrapped engrams, checks if content/ directory exists.
  */
 function isWrapInitialized(engramDir: string): boolean {
   if (!fs.existsSync(engramDir)) return false;
   
-  const entries = fs.readdirSync(engramDir);
-  // Manifest files that don't count as "content"
-  const manifestFiles = new Set([
-    "engram.toml",
-    "README.md",
-    ".gitignore",
-    ".ignore",
-    ".oneliner",
-    ".oneliner.txt",
-  ]);
-  // Content exists if there's .git (cloned), content/ (reorganized), or other non-manifest entries
-  return entries.some(e => !manifestFiles.has(e));
+  const contentDir = path.join(engramDir, CONTENT_DIR);
+  return fs.existsSync(contentDir);
 }
 
 /**
@@ -59,17 +49,15 @@ function readEngramToml(engramDir: string): EngramToml | null {
 }
 
 /**
- * Clone a repo with optional sparse-checkout and ref.
+ * Clone a repo into the content/ subdirectory of an existing engram.
  */
-function cloneIntoExisting(
+function cloneIntoContent(
   url: string,
-  targetDir: string,
+  engramDir: string,
   options: { ref?: string; sparse?: string[] } = {},
 ): void {
   const { ref, sparse } = options;
-  
-  // Clone into a temp dir, then move contents
-  const tempDir = `${targetDir}.tmp`;
+  const contentDir = path.join(engramDir, CONTENT_DIR);
   
   const needsDelayedCheckout = (sparse && sparse.length > 0) || ref;
   const depthFlag = ref ? "" : "--depth 1";
@@ -77,15 +65,15 @@ function cloneIntoExisting(
   const branchFlag = ref && !ref.match(/^[0-9a-f]{40}$/i) ? `-b ${ref}` : "";
 
   execSync(
-    `git clone --filter=blob:none ${depthFlag} ${checkoutFlag} ${branchFlag} ${url} ${tempDir}`.replace(/\s+/g, " ").trim(),
+    `git clone --filter=blob:none ${depthFlag} ${checkoutFlag} ${branchFlag} ${url} ${contentDir}`.replace(/\s+/g, " ").trim(),
     { stdio: "inherit" },
   );
 
   // Configure sparse-checkout if patterns provided
   if (sparse && sparse.length > 0) {
-    execSync(`git sparse-checkout init`, { cwd: tempDir, stdio: "pipe" });
+    execSync(`git sparse-checkout init`, { cwd: contentDir, stdio: "pipe" });
     execSync(`git sparse-checkout set --no-cone ${sparse.map(p => `'${p}'`).join(" ")}`, {
-      cwd: tempDir,
+      cwd: contentDir,
       stdio: "pipe",
       shell: "/bin/sh",
     });
@@ -94,27 +82,8 @@ function cloneIntoExisting(
   // Checkout specific ref if needed
   if (needsDelayedCheckout) {
     const checkoutRef = ref || "HEAD";
-    execSync(`git checkout ${checkoutRef}`, { cwd: tempDir, stdio: "inherit" });
+    execSync(`git checkout ${checkoutRef}`, { cwd: contentDir, stdio: "inherit" });
   }
-
-  // Move .git and content into existing directory (preserving engram.toml, README.md)
-  const tempEntries = fs.readdirSync(tempDir);
-  for (const entry of tempEntries) {
-    const srcPath = path.join(tempDir, entry);
-    const destPath = path.join(targetDir, entry);
-    
-    // Don't overwrite existing manifest files - but do remove from temp
-    if ((entry === "engram.toml" || entry === "README.md") && fs.existsSync(destPath)) {
-      // Remove the conflicting file from temp
-      fs.rmSync(srcPath, { recursive: true, force: true });
-      continue;
-    }
-    
-    fs.renameSync(srcPath, destPath);
-  }
-  
-  // Clean up temp directory (should be empty now, but use recursive just in case)
-  fs.rmSync(tempDir, { recursive: true, force: true });
 }
 
 export const lazyInit = command({
@@ -172,15 +141,10 @@ export const lazyInit = command({
         console.log(pc.dim(`Ref: ${wrap.ref}`));
       }
 
-      cloneIntoExisting(wrap.remote, engramDir, {
+      cloneIntoContent(wrap.remote, engramDir, {
         ref: wrap.ref,
         sparse: wrap.sparse,
       });
-
-      // Check if we need to reorganize content to avoid conflicts
-      if (reorganizeIntoContent(engramDir)) {
-        console.log(pc.dim(`Reorganized content into content/ subdirectory`));
-      }
 
       console.log(pc.green(`✓ Initialized: ${engramToml.name}`));
       if (engramToml.description) {
