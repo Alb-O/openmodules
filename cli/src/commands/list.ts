@@ -1,9 +1,21 @@
 import { command, flag } from "cmd-ts";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import pc from "picocolors";
 import * as TOML from "@iarna/toml";
 import { getModulePaths, findProjectRoot } from "../utils";
+
+/**
+ * Shortens a path by replacing the home directory with ~
+ */
+function shortenPath(p: string): string {
+  const home = os.homedir();
+  if (p.startsWith(home)) {
+    return "~" + p.slice(home.length);
+  }
+  return p;
+}
 
 interface ModuleInfo {
   name: string;
@@ -233,7 +245,7 @@ export const list = command({
     if (globalModules.length > 0 && !localOnly) {
       console.log(
         pc.bold("🌐 Global modules") +
-          pc.dim(` (${paths.global})`) +
+          pc.dim(` (${shortenPath(paths.global)})`) +
           pc.dim(` — ${totalGlobal} module${totalGlobal === 1 ? "" : "s"}`)
       );
       if (flat) {
@@ -252,7 +264,7 @@ export const list = command({
       if (printedSection) console.log("");
       console.log(
         pc.bold("📁 Local modules") +
-          pc.dim(` (${paths.local})`) +
+          pc.dim(` (${shortenPath(paths.local!)})`) +
           pc.dim(` — ${totalLocal} module${totalLocal === 1 ? "" : "s"}`)
       );
       if (flat) {
