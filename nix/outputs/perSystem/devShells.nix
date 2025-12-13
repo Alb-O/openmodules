@@ -10,6 +10,7 @@
     {
       pkgs,
       inputs,
+      self',
       ...
     }:
     {
@@ -19,6 +20,7 @@
           pkgs.bun
           pkgs.nodejs
           inputs.bun2nix.packages.${pkgs.system}.default
+          self'.formatter
         ];
 
         shellHook = ''

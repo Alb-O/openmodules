@@ -30,6 +30,17 @@ const EngramManifestSchema = z.object({
       "agent-msg": z.array(z.string()).optional(),
     })
     .optional(),
+  /** Configuration for wrapped external repositories */
+  wrap: z
+    .object({
+      /** Git remote URL (any format git understands: https, ssh, file, etc.) */
+      remote: z.string(),
+      /** Git ref to checkout (branch, tag, or commit hash) */
+      ref: z.string().optional(),
+      /** Sparse-checkout patterns (glob patterns for files to include) */
+      sparse: z.array(z.string()).optional(),
+    })
+    .optional(),
   "allowed-tools": z.array(z.string()).optional(),
   metadata: z.record(z.string(), z.string()).optional(),
   author: z
@@ -136,6 +147,7 @@ export async function parseEngram(
             agentMsg: triggers?.["agent-msg"],
           }
         : undefined,
+      wrap: parsed.data.wrap,
       metadata: parsed.data.metadata,
       license: parsed.data.license,
       content: promptContent.trim(),

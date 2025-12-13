@@ -26,6 +26,15 @@ export interface Engram {
   lazy?: boolean;
   /** URL to clone/init the engram from (for lazy engrams) */
   url?: string;
+  /** Configuration for wrapped external repositories */
+  wrap?: {
+    /** Git remote URL */
+    remote: string;
+    /** Git ref (branch, tag, commit) */
+    ref?: string;
+    /** Sparse-checkout patterns */
+    sparse?: string[];
+  };
 }
 
 /** Compiled matcher derived from an engram's triggers */

@@ -1,6 +1,10 @@
 import { command, positional, string, flag, option, optional } from "cmd-ts";
+import { execSync } from "child_process";
+import * as fs from "fs";
+import * as path from "path";
+import * as TOML from "@iarna/toml";
 import pc from "picocolors";
-import { findProjectRoot } from "../utils";
+import { findProjectRoot, getModulePaths } from "../utils";
 import {
   readIndex,
   fetchIndex,
@@ -9,9 +13,105 @@ import {
   configureAutoFetch,
 } from "../index-ref";
 
+interface WrapConfig {
+  remote: string;
+  ref?: string;
+  sparse?: string[];
+}
+
+interface EngramToml {
+  name: string;
+  description?: string;
+  wrap?: WrapConfig;
+}
+
+/**
+ * Check if an engram directory has content (is initialized).
+ * For wrapped engrams, checks if there's more than just engram.toml/README.md
+ */
+function isWrapInitialized(engramDir: string): boolean {
+  if (!fs.existsSync(engramDir)) return false;
+  
+  const entries = fs.readdirSync(engramDir);
+  // If there's a .git directory, it's been cloned
+  if (entries.includes(".git")) return true;
+  
+  // Check if there are any content files beyond manifest
+  const manifestFiles = ["engram.toml", "README.md", ".gitignore"];
+  const contentFiles = entries.filter(e => !manifestFiles.includes(e));
+  return contentFiles.length > 0;
+}
+
+/**
+ * Read and parse engram.toml from a directory.
+ */
+function readEngramToml(engramDir: string): EngramToml | null {
+  const tomlPath = path.join(engramDir, "engram.toml");
+  if (!fs.existsSync(tomlPath)) return null;
+  
+  const content = fs.readFileSync(tomlPath, "utf-8");
+  return TOML.parse(content) as EngramToml;
+}
+
+/**
+ * Clone a repo with optional sparse-checkout and ref.
+ */
+function cloneIntoExisting(
+  url: string,
+  targetDir: string,
+  options: { ref?: string; sparse?: string[] } = {},
+): void {
+  const { ref, sparse } = options;
+  
+  // Clone into a temp dir, then move contents
+  const tempDir = `${targetDir}.tmp`;
+  
+  const needsDelayedCheckout = (sparse && sparse.length > 0) || ref;
+  const depthFlag = ref ? "" : "--depth 1";
+  const checkoutFlag = needsDelayedCheckout ? "--no-checkout" : "";
+  const branchFlag = ref && !ref.match(/^[0-9a-f]{40}$/i) ? `-b ${ref}` : "";
+
+  execSync(
+    `git clone --filter=blob:none ${depthFlag} ${checkoutFlag} ${branchFlag} ${url} ${tempDir}`.replace(/\s+/g, " ").trim(),
+    { stdio: "inherit" },
+  );
+
+  // Configure sparse-checkout if patterns provided
+  if (sparse && sparse.length > 0) {
+    execSync(`git sparse-checkout init`, { cwd: tempDir, stdio: "pipe" });
+    execSync(`git sparse-checkout set --no-cone ${sparse.map(p => `'${p}'`).join(" ")}`, {
+      cwd: tempDir,
+      stdio: "pipe",
+      shell: "/bin/sh",
+    });
+  }
+
+  // Checkout specific ref if needed
+  if (needsDelayedCheckout) {
+    const checkoutRef = ref || "HEAD";
+    execSync(`git checkout ${checkoutRef}`, { cwd: tempDir, stdio: "inherit" });
+  }
+
+  // Move .git and content into existing directory (preserving engram.toml, README.md)
+  const tempEntries = fs.readdirSync(tempDir);
+  for (const entry of tempEntries) {
+    const srcPath = path.join(tempDir, entry);
+    const destPath = path.join(targetDir, entry);
+    
+    // Don't overwrite existing manifest files
+    if ((entry === "engram.toml" || entry === "README.md") && fs.existsSync(destPath)) {
+      continue;
+    }
+    
+    fs.renameSync(srcPath, destPath);
+  }
+  
+  fs.rmdirSync(tempDir);
+}
+
 export const lazyInit = command({
   name: "lazy-init",
-  description: "Initialize a specific engram submodule on-demand",
+  description: "Initialize a lazy engram (wrapped or submodule) on-demand",
   args: {
     name: positional({
       type: string,
@@ -21,7 +121,7 @@ export const lazyInit = command({
     fetch: flag({
       long: "fetch",
       short: "f",
-      description: "Fetch index from remote first",
+      description: "Fetch index from remote first (for submodules)",
     }),
     all: flag({
       long: "all",
@@ -36,7 +136,47 @@ export const lazyInit = command({
       process.exit(1);
     }
 
-    // Optionally fetch index first
+    const paths = getModulePaths(projectRoot);
+    const engramsDir = paths.local;
+    if (!engramsDir) {
+      console.error(pc.red("Error: No .engrams directory found"));
+      process.exit(1);
+    }
+
+    // First, check if the engram exists as a wrapped engram with [wrap] config
+    const engramDir = path.join(engramsDir, name);
+    const engramToml = readEngramToml(engramDir);
+
+    if (engramToml?.wrap) {
+      // This is a wrapped engram - use the wrap config to clone
+      if (isWrapInitialized(engramDir)) {
+        console.log(pc.yellow(`Engram '${name}' is already initialized`));
+        process.exit(0);
+      }
+
+      console.log(pc.blue(`Initializing wrapped engram: ${name}...`));
+      const wrap = engramToml.wrap;
+
+      if (wrap.sparse && wrap.sparse.length > 0) {
+        console.log(pc.dim(`Sparse patterns: ${wrap.sparse.join(", ")}`));
+      }
+      if (wrap.ref) {
+        console.log(pc.dim(`Ref: ${wrap.ref}`));
+      }
+
+      cloneIntoExisting(wrap.remote, engramDir, {
+        ref: wrap.ref,
+        sparse: wrap.sparse,
+      });
+
+      console.log(pc.green(`✓ Initialized: ${engramToml.name}`));
+      if (engramToml.description) {
+        console.log(pc.dim(`  ${engramToml.description}`));
+      }
+      return;
+    }
+
+    // Fall back to submodule-based lazy init via index
     if (shouldFetch) {
       console.log(pc.dim("Fetching index from remote..."));
       try {
@@ -46,11 +186,15 @@ export const lazyInit = command({
       }
     }
 
-    // Read the index
     const index = readIndex(projectRoot);
     if (!index) {
-      console.error(pc.red("Error: No engram index found"));
-      console.error(pc.dim("Run 'engram sync' to create the index, or use --fetch"));
+      // Check if the engram directory exists but has no wrap config
+      if (fs.existsSync(engramDir)) {
+        console.error(pc.red(`Error: Engram '${name}' has no [wrap] config and no index entry`));
+        console.error(pc.dim("Add a [wrap] section to engram.toml or sync the index"));
+      } else {
+        console.error(pc.red(`Error: Engram '${name}' not found`));
+      }
       process.exit(1);
     }
 
@@ -82,7 +226,7 @@ export const lazyInit = command({
       return;
     }
 
-    // Initialize specific engram
+    // Initialize specific engram from index (submodule)
     if (!index[name]) {
       console.error(pc.red(`Error: Engram '${name}' not found in index`));
       console.error(pc.dim("Available engrams:"));

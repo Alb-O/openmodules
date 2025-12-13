@@ -38,6 +38,8 @@ interface EngramInfo {
   initialized: boolean;
   /** Whether this is from the index (lazy) rather than filesystem scan */
   fromIndex?: boolean;
+  /** Whether this is a wrapped engram (has [wrap] config) */
+  isWrapped?: boolean;
 }
 
 interface EngramToml {
@@ -48,12 +50,18 @@ interface EngramToml {
     "user-msg"?: string[];
     "agent-msg"?: string[];
   };
+  wrap?: {
+    remote?: string;
+    ref?: string;
+    sparse?: string[];
+  };
 }
 
 function parseEngramToml(tomlPath: string): {
   name?: string;
   description?: string;
   triggers?: { anyMsg?: string[]; userMsg?: string[]; agentMsg?: string[] };
+  hasWrap?: boolean;
   error?: string;
 } {
   try {
@@ -72,11 +80,34 @@ function parseEngramToml(tomlPath: string): {
       name: parsed.name,
       description: parsed.description,
       triggers,
+      hasWrap: !!parsed.wrap?.remote,
     };
   } catch (err) {
     return {
       error: (err as Error)?.message || "Unknown parse error",
     };
+  }
+}
+
+/**
+ * Check if a wrapped engram has content beyond manifest files.
+ * Returns true if content exists, false if only manifest files.
+ */
+function isWrappedEngramInitialized(engramPath: string): boolean {
+  try {
+    const entries = fs.readdirSync(engramPath);
+    // Content exists if there's more than just manifest files
+    const manifestFiles = new Set([
+      ".gitignore",
+      ".ignore",
+      "engram.toml",
+      "README.md",
+      ".oneliner",
+      ".oneliner.txt",
+    ]);
+    return entries.some(e => !manifestFiles.has(e));
+  } catch {
+    return false;
   }
 }
 
@@ -93,7 +124,21 @@ function scanEngramsRecursive(
 
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
-    if (entry.isDirectory() && !entry.name.startsWith(".")) {
+    // Skip hidden entries
+    if (entry.name.startsWith(".")) continue;
+
+    // Check if entry is a directory (or symlink to directory)
+    let isDir = entry.isDirectory();
+    if (entry.isSymbolicLink()) {
+      const targetPath = path.join(dir, entry.name);
+      try {
+        isDir = fs.statSync(targetPath).isDirectory();
+      } catch {
+        continue; // Skip broken symlinks
+      }
+    }
+
+    if (isDir) {
       const engramPath = path.join(dir, entry.name);
       const tomlPath = path.join(engramPath, "engram.toml");
       const hasToml = fs.existsSync(tomlPath);
@@ -106,6 +151,12 @@ function scanEngramsRecursive(
       // Only include as an engram if it has engram.toml
       // But still traverse for nested engrams
       if (hasToml) {
+        // For wrapped engrams, check if content exists beyond manifest files
+        const isWrapped = tomlData?.hasWrap ?? false;
+        const initialized = isWrapped
+          ? isWrappedEngramInitialized(engramPath)
+          : true;
+
         engrams.push({
           name: entry.name,
           displayName: tomlData?.name || entry.name,
@@ -117,7 +168,8 @@ function scanEngramsRecursive(
           triggers: tomlData?.triggers,
           children,
           depth,
-          initialized: true, // If we found engram.toml, it's initialized
+          initialized,
+          isWrapped,
         });
       } else if (children.length > 0) {
         // Directory has no toml but contains nested engrams - include children at this level
@@ -159,7 +211,12 @@ function printEngramTree(
     const childPrefix = isLastItem ? "  " : "│ ";
 
     // Initialization status indicator
-    const statusDot = eg.initialized ? pc.green("●") : pc.dim("○");
+    // ● = initialized, ◐ = lazy (wrapped but not cloned), ○ = not initialized
+    const statusDot = eg.initialized
+      ? pc.green("●")
+      : eg.isWrapped
+        ? pc.yellow("◐")
+        : pc.dim("○");
 
     // Engram name and display name
     const nameDisplay =
@@ -323,7 +380,11 @@ export const list = command({
       if (flat) {
         const flatList = flatten(globalEngrams);
         for (const eg of flatList) {
-          const statusDot = eg.initialized ? pc.green("●") : pc.dim("○");
+          const statusDot = eg.initialized
+            ? pc.green("●")
+            : eg.isWrapped
+              ? pc.yellow("◐")
+              : pc.dim("○");
           const indent = "  ".repeat(eg.depth);
           console.log(`${indent}${statusDot} ${eg.name}`);
         }
@@ -343,7 +404,11 @@ export const list = command({
       if (flat) {
         const flatList = flatten(localEngrams);
         for (const eg of flatList) {
-          const statusDot = eg.initialized ? pc.green("●") : pc.dim("○");
+          const statusDot = eg.initialized
+            ? pc.green("●")
+            : eg.isWrapped
+              ? pc.yellow("◐")
+              : pc.dim("○");
           const indent = "  ".repeat(eg.depth);
           console.log(`${indent}${statusDot} ${eg.name}`);
         }
@@ -353,6 +418,6 @@ export const list = command({
     }
 
     // Legend
-    console.log(pc.dim(`\n● initialized  ○ not initialized`));
+    console.log(pc.dim(`\n● initialized  ◐ lazy  ○ not initialized`));
   },
 });
