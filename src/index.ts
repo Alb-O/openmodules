@@ -124,6 +124,7 @@ const EngramsPlugin: Plugin = async (input) => {
 
           const fileTree = await generateFileTree(engram.directory, {
             includeMetadata: true,
+            manifestOneliners: engram.oneliners,
           });
           const treeSection = fileTree
             ? `\n\n## Available Resources:\n\`\`\`\n${fileTree}\n\`\`\``

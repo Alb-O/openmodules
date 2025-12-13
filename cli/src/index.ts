@@ -8,6 +8,7 @@ import { init } from "./commands/init";
 import { sync } from "./commands/sync";
 import { lazyInit, showIndex } from "./commands/lazy";
 import { wrap } from "./commands/wrap";
+import { preview } from "./commands/preview";
 
 const app = subcommands({
   name: "engram",
@@ -18,6 +19,7 @@ const app = subcommands({
     add,
     wrap,
     list,
+    preview,
     remove,
     cache,
     sync,

@@ -35,6 +35,11 @@ export interface Engram {
     /** Sparse-checkout patterns */
     sparse?: string[];
   };
+  /**
+   * Manual oneliners for files/directories (relative paths from engram root).
+   * These take precedence over file-based oneliners (comments, .oneliner files).
+   */
+  oneliners?: Record<string, string>;
 }
 
 /** Compiled matcher derived from an engram's triggers */
@@ -55,4 +60,9 @@ export interface FileTreeOptions {
   dirsFirst?: boolean;
   ignoreFile?: string;
   includeMetadata?: boolean;
+  /**
+   * Manual oneliners from manifest (relative paths from engram root).
+   * These take precedence over file-based oneliners.
+   */
+  manifestOneliners?: Record<string, string>;
 }

@@ -41,6 +41,13 @@ const EngramManifestSchema = z.object({
       sparse: z.array(z.string()).optional(),
     })
     .optional(),
+  /**
+   * Manual oneliners for files/directories.
+   * Keys are relative paths from engram root (use trailing / for directories).
+   * These take precedence over file-based oneliners (comments, .oneliner files).
+   * Useful for wrapped repos where you can't modify the content.
+   */
+  oneliners: z.record(z.string(), z.string()).optional(),
   "allowed-tools": z.array(z.string()).optional(),
   metadata: z.record(z.string(), z.string()).optional(),
   author: z
@@ -148,6 +155,7 @@ export async function parseEngram(
           }
         : undefined,
       wrap: parsed.data.wrap,
+      oneliners: parsed.data.oneliners,
       metadata: parsed.data.metadata,
       license: parsed.data.license,
       content: promptContent.trim(),

@@ -96,6 +96,7 @@ export async function generateFileTree(
     exclude = DEFAULT_EXCLUDE_PATTERNS,
     ignoreFile = ".ignore",
     includeMetadata = false,
+    manifestOneliners = {},
   } = options;
 
   // Load .ignore file from root directory
@@ -118,9 +119,21 @@ export async function generateFileTree(
 
     // Get directory description if it has one
     if (includeMetadata && dir !== directory) {
-      const dirComment = await getDirOneliner(dir);
-      if (dirComment) {
-        lines.push(`${dir}/  ${dirComment}`);
+      const relPath = relative(directory, dir);
+      // Manifest oneliners use trailing slash for directories
+      const manifestKey = `${relPath}/`;
+      const manifestOneliner = manifestOneliners[manifestKey];
+      if (manifestOneliner) {
+        const truncated =
+          manifestOneliner.length > 80
+            ? `${manifestOneliner.slice(0, 77)}...`
+            : manifestOneliner;
+        lines.push(`${dir}/  # ${truncated}`);
+      } else {
+        const dirComment = await getDirOneliner(dir);
+        if (dirComment) {
+          lines.push(`${dir}/  ${dirComment}`);
+        }
       }
     }
 
@@ -151,18 +164,30 @@ export async function generateFileTree(
         // Add file with optional metadata
         let line = fullPath;
         if (includeMetadata) {
-          // Default oneliner for README files since they're shown on activation
-          const lowerName = entry.name.toLowerCase();
-          if (
-            lowerName === "readme.md" ||
-            lowerName === "readme.txt" ||
-            lowerName === "readme"
-          ) {
-            line = `${fullPath}  # module README (shown above)`;
+          const relPath = relative(directory, fullPath);
+          const manifestOneliner = manifestOneliners[relPath];
+
+          if (manifestOneliner) {
+            // Manifest oneliners take precedence
+            const truncated =
+              manifestOneliner.length > 80
+                ? `${manifestOneliner.slice(0, 77)}...`
+                : manifestOneliner;
+            line = `${fullPath}  # ${truncated}`;
           } else {
-            const comment = await getFileInlineComment(fullPath);
-            if (comment) {
-              line = `${fullPath}  ${comment}`;
+            // Default oneliner for README files since they're shown on activation
+            const lowerName = entry.name.toLowerCase();
+            if (
+              lowerName === "readme.md" ||
+              lowerName === "readme.txt" ||
+              lowerName === "readme"
+            ) {
+              line = `${fullPath}  # module README (shown above)`;
+            } else {
+              const comment = await getFileInlineComment(fullPath);
+              if (comment) {
+                line = `${fullPath}  ${comment}`;
+              }
             }
           }
         }

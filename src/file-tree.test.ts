@@ -252,5 +252,141 @@ echo "hi"
       expect(tree).toContain("script.sh");
       expect(tree).not.toMatch(/\.oneliner/);
     });
+
+    it("uses manifest oneliners for files", async () => {
+      const engramDir = path.join(tempDir, "manifest-file-oneliner-test");
+      await fs.mkdir(engramDir, { recursive: true });
+      await fs.writeFile(path.join(engramDir, "api.ts"), "export {}");
+      await fs.writeFile(path.join(engramDir, "utils.ts"), "export {}");
+
+      const tree = await generateFileTree(engramDir, {
+        includeMetadata: true,
+        manifestOneliners: {
+          "api.ts": "Main API entry point",
+          "utils.ts": "Helper utilities",
+        },
+      });
+
+      expect(tree).toContain("# Main API entry point");
+      expect(tree).toContain("# Helper utilities");
+    });
+
+    it("uses manifest oneliners for directories (with trailing slash)", async () => {
+      const engramDir = path.join(tempDir, "manifest-dir-oneliner-test");
+      const subDir = path.join(engramDir, "docs");
+      await fs.mkdir(subDir, { recursive: true });
+      await fs.writeFile(path.join(subDir, "guide.md"), "# Guide");
+
+      const tree = await generateFileTree(engramDir, {
+        includeMetadata: true,
+        manifestOneliners: {
+          "docs/": "Documentation files",
+        },
+      });
+
+      expect(tree).toContain("docs/");
+      expect(tree).toContain("# Documentation files");
+    });
+
+    it("manifest oneliners take precedence over file-based oneliners", async () => {
+      const engramDir = path.join(tempDir, "manifest-priority-test");
+      await fs.mkdir(engramDir, { recursive: true });
+      // File has an inline oneliner comment
+      await fs.writeFile(
+        path.join(engramDir, "script.sh"),
+        `#!/bin/bash
+# oneliner: From file comment
+echo "hello"
+`,
+      );
+
+      const tree = await generateFileTree(engramDir, {
+        includeMetadata: true,
+        manifestOneliners: {
+          "script.sh": "From manifest (should win)",
+        },
+      });
+
+      expect(tree).toContain("# From manifest (should win)");
+      expect(tree).not.toContain("From file comment");
+    });
+
+    it("manifest oneliners take precedence over .oneliner files for directories", async () => {
+      const engramDir = path.join(tempDir, "manifest-dir-priority-test");
+      const subDir = path.join(engramDir, "lib");
+      await fs.mkdir(subDir, { recursive: true });
+      await fs.writeFile(path.join(subDir, ".oneliner"), "From .oneliner file");
+      await fs.writeFile(path.join(subDir, "index.ts"), "export {}");
+
+      const tree = await generateFileTree(engramDir, {
+        includeMetadata: true,
+        manifestOneliners: {
+          "lib/": "From manifest (should win)",
+        },
+      });
+
+      expect(tree).toContain("# From manifest (should win)");
+      expect(tree).not.toContain("From .oneliner file");
+    });
+
+    it("truncates long manifest oneliners", async () => {
+      const engramDir = path.join(tempDir, "manifest-truncate-test");
+      await fs.mkdir(engramDir, { recursive: true });
+      await fs.writeFile(path.join(engramDir, "long.ts"), "export {}");
+
+      const longDescription =
+        "This is a very long description that exceeds eighty characters and should be truncated with ellipsis";
+      const tree = await generateFileTree(engramDir, {
+        includeMetadata: true,
+        manifestOneliners: {
+          "long.ts": longDescription,
+        },
+      });
+
+      expect(tree).toContain("...");
+      expect(tree).not.toContain(longDescription);
+    });
+
+    it("falls back to file-based oneliners when no manifest entry exists", async () => {
+      const engramDir = path.join(tempDir, "manifest-fallback-test");
+      await fs.mkdir(engramDir, { recursive: true });
+      await fs.writeFile(
+        path.join(engramDir, "with-manifest.ts"),
+        "// oneliner: Should be ignored\nexport {}",
+      );
+      await fs.writeFile(
+        path.join(engramDir, "without-manifest.ts"),
+        "// oneliner: From file\nexport {}",
+      );
+
+      const tree = await generateFileTree(engramDir, {
+        includeMetadata: true,
+        manifestOneliners: {
+          "with-manifest.ts": "From manifest",
+        },
+      });
+
+      expect(tree).toContain("# From manifest");
+      expect(tree).toContain("# From file");
+      expect(tree).not.toContain("Should be ignored");
+    });
+
+    it("supports nested paths in manifest oneliners", async () => {
+      const engramDir = path.join(tempDir, "manifest-nested-test");
+      const nestedDir = path.join(engramDir, "content", "docs");
+      await fs.mkdir(nestedDir, { recursive: true });
+      await fs.writeFile(path.join(nestedDir, "api.md"), "# API");
+
+      const tree = await generateFileTree(engramDir, {
+        includeMetadata: true,
+        manifestOneliners: {
+          "content/docs/": "Nested documentation",
+          "content/docs/api.md": "API reference guide",
+        },
+      });
+
+      expect(tree).toContain("# Nested documentation");
+      expect(tree).toContain("# API reference guide");
+    });
   });
 });
