@@ -5,6 +5,60 @@ import * as path from "path";
 import pc from "picocolors";
 import { getModulePaths, findProjectRoot, parseRepoUrl, getEngramName } from "../utils";
 
+/** Files that are engram-specific and should stay at root level */
+const MANIFEST_FILES = new Set([
+  "engram.toml",
+  "README.md",
+  ".gitignore",
+  ".ignore",
+  ".oneliner",
+  ".oneliner.txt",
+]);
+
+/**
+ * Check if cloned content has any files at root level (not just directories).
+ * If so, we need to reorganize into content/ to avoid conflicts.
+ */
+function hasRootLevelFiles(dir: string): boolean {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    // Skip manifest files - they're ours
+    if (MANIFEST_FILES.has(entry.name)) continue;
+    // Skip .git directory
+    if (entry.name === ".git") continue;
+    // If it's a file (not directory), we have root-level files
+    if (entry.isFile()) return true;
+  }
+  return false;
+}
+
+/**
+ * Reorganize cloned content into content/ subdirectory.
+ * Preserves manifest files at root level.
+ */
+export function reorganizeIntoContent(dir: string): boolean {
+  if (!hasRootLevelFiles(dir)) {
+    return false; // No reorganization needed
+  }
+
+  const contentDir = path.join(dir, "content");
+  fs.mkdirSync(contentDir, { recursive: true });
+
+  const entries = fs.readdirSync(dir);
+  for (const entry of entries) {
+    // Skip manifest files and the content dir we just created
+    if (MANIFEST_FILES.has(entry) || entry === "content") continue;
+    // Skip .git directory
+    if (entry === ".git") continue;
+
+    const srcPath = path.join(dir, entry);
+    const destPath = path.join(contentDir, entry);
+    fs.renameSync(srcPath, destPath);
+  }
+
+  return true; // Reorganized
+}
+
 /**
  * Clone a repo with optional sparse-checkout and ref.
  * Uses blobless clone for efficiency.
@@ -293,6 +347,11 @@ export const wrap = command({
         }
 
         cloneRepo(parsed!.url, targetDir, { ref, sparse });
+
+        // Check if we need to reorganize content to avoid conflicts
+        if (reorganizeIntoContent(targetDir)) {
+          console.log(pc.dim(`Reorganized content into content/ subdirectory`));
+        }
       }
     } else {
       if (lazy) {

@@ -12,6 +12,7 @@ import {
   isSubmoduleInitialized,
   configureAutoFetch,
 } from "../index-ref";
+import { reorganizeIntoContent } from "./wrap";
 
 interface WrapConfig {
   remote: string;
@@ -27,19 +28,23 @@ interface EngramToml {
 
 /**
  * Check if an engram directory has content (is initialized).
- * For wrapped engrams, checks if there's more than just engram.toml/README.md
+ * For wrapped engrams, checks if there's more than just manifest files.
  */
 function isWrapInitialized(engramDir: string): boolean {
   if (!fs.existsSync(engramDir)) return false;
   
   const entries = fs.readdirSync(engramDir);
-  // If there's a .git directory, it's been cloned
-  if (entries.includes(".git")) return true;
-  
-  // Check if there are any content files beyond manifest
-  const manifestFiles = ["engram.toml", "README.md", ".gitignore"];
-  const contentFiles = entries.filter(e => !manifestFiles.includes(e));
-  return contentFiles.length > 0;
+  // Manifest files that don't count as "content"
+  const manifestFiles = new Set([
+    "engram.toml",
+    "README.md",
+    ".gitignore",
+    ".ignore",
+    ".oneliner",
+    ".oneliner.txt",
+  ]);
+  // Content exists if there's .git (cloned), content/ (reorganized), or other non-manifest entries
+  return entries.some(e => !manifestFiles.has(e));
 }
 
 /**
@@ -98,15 +103,18 @@ function cloneIntoExisting(
     const srcPath = path.join(tempDir, entry);
     const destPath = path.join(targetDir, entry);
     
-    // Don't overwrite existing manifest files
+    // Don't overwrite existing manifest files - but do remove from temp
     if ((entry === "engram.toml" || entry === "README.md") && fs.existsSync(destPath)) {
+      // Remove the conflicting file from temp
+      fs.rmSync(srcPath, { recursive: true, force: true });
       continue;
     }
     
     fs.renameSync(srcPath, destPath);
   }
   
-  fs.rmdirSync(tempDir);
+  // Clean up temp directory (should be empty now, but use recursive just in case)
+  fs.rmSync(tempDir, { recursive: true, force: true });
 }
 
 export const lazyInit = command({
@@ -168,6 +176,11 @@ export const lazyInit = command({
         ref: wrap.ref,
         sparse: wrap.sparse,
       });
+
+      // Check if we need to reorganize content to avoid conflicts
+      if (reorganizeIntoContent(engramDir)) {
+        console.log(pc.dim(`Reorganized content into content/ subdirectory`));
+      }
 
       console.log(pc.green(`✓ Initialized: ${engramToml.name}`));
       if (engramToml.description) {
