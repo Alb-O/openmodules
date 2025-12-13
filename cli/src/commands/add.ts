@@ -1,5 +1,5 @@
 import { command, positional, flag, option, string, optional } from "cmd-ts";
-import { execSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import pc from "picocolors";
@@ -105,22 +105,16 @@ async function handleAdd({ parsed, engramName, projectRoot, targetDir, isGlobal,
   // Force clean any existing submodule state (handles broken/partial submodules)
   if (force && !isGlobal && projectRoot) {
     const relativePath = path.relative(projectRoot, targetDir);
-    try {
-      execSync(`git submodule deinit -f ${relativePath}`, {
-        cwd: projectRoot,
-        stdio: "pipe",
-      });
-    } catch {
-      // Ignore - may not be initialized
-    }
-    try {
-      execSync(`git rm -f ${relativePath}`, {
-        cwd: projectRoot,
-        stdio: "pipe",
-      });
-    } catch {
-      // Ignore - may not be in index
-    }
+    // Deinit submodule - may not be initialized, that's ok
+    spawnSync("git", ["submodule", "deinit", "-f", relativePath], {
+      cwd: projectRoot,
+      stdio: "pipe",
+    });
+    // Remove from index - may not be in index, that's ok
+    spawnSync("git", ["rm", "-f", relativePath], {
+      cwd: projectRoot,
+      stdio: "pipe",
+    });
     // Find the actual git dir (handles nested submodules)
     const dotGitPath = path.join(projectRoot, ".git");
     const gitDir = resolveGitDir(projectRoot, dotGitPath);

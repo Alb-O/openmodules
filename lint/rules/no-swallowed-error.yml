@@ -1,0 +1,23 @@
+id: no-swallowed-error
+language: typescript
+severity: error
+message: "Catch block swallows error silently. Add explicit handling (return, throw, continue) or log the error."
+note: |
+  Empty catch blocks hide errors. Either:
+  - Return a value to indicate failure
+  - Re-throw or throw a new error
+  - Use continue/break if in a loop
+  - Log the error with console.error or a logger
+  - Use spawnSync and check exit code instead of try/catch
+rule:
+  kind: catch_clause
+  has:
+    kind: statement_block
+    not:
+      has:
+        any:
+          - kind: expression_statement
+          - kind: return_statement
+          - kind: throw_statement
+          - kind: continue_statement
+          - kind: break_statement

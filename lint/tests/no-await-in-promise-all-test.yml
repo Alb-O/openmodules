@@ -1,0 +1,21 @@
+id: no-await-in-promise-all
+valid:
+  # Correct usage - promises without await inside
+  - |
+    const [foo, bar] = await Promise.all([
+      getFoo(),
+      getBar(),
+    ])
+  # IIFE with await inside is ok (it's a separate async context)
+  - |
+    const [foo, bar] = await Promise.all([
+      getFoo(),
+      (async () => { await getBaz() })(),
+    ])
+invalid:
+  # await inside Promise.all defeats parallelization
+  - |
+    const [foo, bar] = await Promise.all([
+      await getFoo(),
+      getBar(),
+    ])

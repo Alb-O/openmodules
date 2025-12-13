@@ -1,10 +1,41 @@
 import os from "os";
-import { promises as fs, Dirent } from "fs";
+import { promises as fs, existsSync, Dirent } from "fs";
 import { dirname, join, sep } from "path";
-import { execSync } from "child_process";
+import { spawnSync } from "child_process";
 import type { Engram } from "./types";
 import { logWarning } from "./logging";
 import { MANIFEST_FILENAME, parseEngram, generateToolName } from "./manifest";
+
+/**
+ * Run a git command and return stdout, or null if it fails.
+ */
+function git(args: string[], cwd: string): string | null {
+  const result = spawnSync("git", args, {
+    cwd,
+    encoding: "utf-8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  if (result.status !== 0) return null;
+  return (result.stdout as string).trim();
+}
+
+/**
+ * Safely stat a path, returning null if it doesn't exist or fails.
+ */
+async function safeStat(path: string) {
+  const file = Bun.file(path);
+  if (!(await file.exists())) return null;
+  return fs.stat(path);
+}
+
+/**
+ * Safely get realpath, returning original path on failure.
+ */
+async function safeRealpath(path: string): Promise<string> {
+  const file = Bun.file(path);
+  if (!(await file.exists())) return path;
+  return fs.realpath(path);
+}
 
 /**
  * Finds all engram.toml files within a base path.
@@ -17,32 +48,36 @@ export async function findEngramFiles(basePath: string): Promise<string[]> {
 
   while (queue.length > 0) {
     const current = queue.pop() as string;
-    let realCurrent: string;
 
-    try {
-      realCurrent = await fs.realpath(current);
-    } catch (error: any) {
-      if (current === basePath && error?.code === "ENOENT") {
-        throw error;
+    // Check if path exists before trying to resolve
+    if (!(await Bun.file(current).exists())) {
+      if (current === basePath) {
+        const err = new Error(`ENOENT: no such file or directory, '${current}'`) as NodeJS.ErrnoException;
+        err.code = "ENOENT";
+        throw err;
       }
       continue;
     }
+
+    const realCurrent = await fs.realpath(current);
 
     if (visited.has(realCurrent)) {
       continue;
     }
     visited.add(realCurrent);
 
-    let entries;
-    try {
-      entries = await fs.readdir(current, { withFileTypes: true });
-    } catch (error: any) {
-      if (current === basePath && error?.code === "ENOENT") {
-        throw error;
+    let entries: Dirent[];
+    const stat = await safeStat(current);
+    if (!stat?.isDirectory()) {
+      if (current === basePath) {
+        const err = new Error(`ENOENT: not a directory, '${current}'`) as NodeJS.ErrnoException;
+        err.code = "ENOENT";
+        throw err;
       }
-      logWarning(`Unexpected error reading ${current}:`, error);
       continue;
     }
+
+    entries = await fs.readdir(current, { withFileTypes: true });
 
     for (const entry of entries) {
       const fullPath = join(current, entry.name);
@@ -50,12 +85,9 @@ export async function findEngramFiles(basePath: string): Promise<string[]> {
       let stat: Dirent | Awaited<ReturnType<typeof fs.stat>>;
 
       if (entry.isSymbolicLink()) {
-        try {
-          // fs.stat follows symlinks; broken links are skipped
-          stat = await fs.stat(fullPath);
-        } catch {
-          continue;
-        }
+        const linkedStat = await safeStat(fullPath);
+        if (!linkedStat) continue; // Skip broken symlinks
+        stat = linkedStat;
       } else {
         stat = entry;
       }
@@ -96,12 +128,7 @@ async function establishEngramHierarchy(engrams: Engram[]): Promise<void> {
   // Resolve real paths for all engrams to handle symlinks correctly
   const realPaths = new Map<Engram, string>();
   for (const engram of engrams) {
-    try {
-      realPaths.set(engram, await fs.realpath(engram.directory));
-    } catch {
-      // If realpath fails, use original path
-      realPaths.set(engram, engram.directory);
-    }
+    realPaths.set(engram, await safeRealpath(engram.directory));
   }
 
   // Sort by resolved directory depth (shallowest first)
@@ -161,8 +188,9 @@ export async function discoverEngrams(basePaths: unknown): Promise<Engram[]> {
           engrams.push(engram);
         }
       }
-    } catch (error: any) {
-      if (error?.code === "ENOENT") {
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException)?.code;
+      if (code === "ENOENT") {
         continue;
       }
       logWarning(
@@ -247,28 +275,16 @@ const INDEX_REF = "refs/engrams/index";
  * Read the engram index from refs/engrams/index in a git repo
  */
 export function readIndexRef(repoPath: string): EngramIndex | null {
-  try {
-    const content = execSync(`git cat-file -p ${INDEX_REF}`, {
-      cwd: repoPath,
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
+  const content = git(["cat-file", "-p", INDEX_REF], repoPath);
+  if (!content) return null;
+  return JSON.parse(content) as EngramIndex;
 }
 
 /**
  * Check if a submodule directory has been initialized (has engram.toml)
  */
-async function isSubmoduleInitialized(engramPath: string): Promise<boolean> {
-  try {
-    await fs.access(join(engramPath, MANIFEST_FILENAME));
-    return true;
-  } catch {
-    return false;
-  }
+function isSubmoduleInitialized(engramPath: string): boolean {
+  return existsSync(join(engramPath, MANIFEST_FILENAME));
 }
 
 /**
@@ -290,15 +306,12 @@ export async function getEngramsFromIndex(
     const engramPath = join(engramsDir, key);
 
     // Skip if already initialized
-    if (await isSubmoduleInitialized(engramPath)) {
+    if (isSubmoduleInitialized(engramPath)) {
       continue;
     }
 
     // Check if the directory exists (submodule registered but not cloned)
-    try {
-      await fs.access(engramPath);
-    } catch {
-      // Directory doesn't exist at all, skip
+    if (!existsSync(engramPath)) {
       continue;
     }
 
@@ -371,18 +384,14 @@ export async function discoverEngramsWithLazy(
     const localEngramsDir = paths.find((p) => p.includes(".engrams"));
 
     if (localEngramsDir) {
-      try {
-        const lazyEngrams = await getEngramsFromIndex(repoPath, localEngramsDir);
+      const lazyEngrams = await getEngramsFromIndex(repoPath, localEngramsDir);
 
-        // Only add lazy engrams that aren't already discovered
-        const existingToolNames = new Set(engrams.map((e) => e.toolName));
-        for (const lazyEngram of lazyEngrams) {
-          if (!existingToolNames.has(lazyEngram.toolName)) {
-            engrams.push(lazyEngram);
-          }
+      // Only add lazy engrams that aren't already discovered
+      const existingToolNames = new Set(engrams.map((e) => e.toolName));
+      for (const lazyEngram of lazyEngrams) {
+        if (!existingToolNames.has(lazyEngram.toolName)) {
+          engrams.push(lazyEngram);
         }
-      } catch (error) {
-        logWarning("Failed to read engram index for lazy engrams:", error);
       }
     }
   }

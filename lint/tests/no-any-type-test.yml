@@ -1,0 +1,11 @@
+id: no-any-type
+valid:
+  - "const x: string = 'hello'"
+  - "const x: unknown = getValue()"
+  - "function foo<T>(x: T): T { return x }"
+  - "const x: number | string = 1"
+invalid:
+  - "const x: any = 1"
+  - "function foo(x: any): any { return x }"
+  - "const items: any[] = []"
+  - "type Foo = { data: any }"

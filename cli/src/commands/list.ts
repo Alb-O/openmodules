@@ -40,6 +40,16 @@ interface EngramInfo {
   fromIndex?: boolean;
 }
 
+interface EngramToml {
+  name?: string;
+  description?: string;
+  triggers?: {
+    "any-msg"?: string[];
+    "user-msg"?: string[];
+    "agent-msg"?: string[];
+  };
+}
+
 function parseEngramToml(tomlPath: string): {
   name?: string;
   description?: string;
@@ -48,7 +58,7 @@ function parseEngramToml(tomlPath: string): {
 } {
   try {
     const content = fs.readFileSync(tomlPath, "utf-8");
-    const parsed = TOML.parse(content) as any;
+    const parsed = TOML.parse(content) as EngramToml;
     // Convert hyphenated TOML keys to camelCase
     const rawTriggers = parsed.triggers;
     const triggers = rawTriggers
@@ -63,9 +73,9 @@ function parseEngramToml(tomlPath: string): {
       description: parsed.description,
       triggers,
     };
-  } catch (err: any) {
+  } catch (err) {
     return {
-      error: err?.message || "Unknown parse error",
+      error: (err as Error)?.message || "Unknown parse error",
     };
   }
 }

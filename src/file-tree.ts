@@ -21,12 +21,10 @@ const DEFAULT_EXCLUDE_PATTERNS = [
  * Returns null if file doesn't exist.
  */
 async function loadIgnoreFile(filePath: string): Promise<Ignore | null> {
-  try {
-    const content = await fs.readFile(filePath, "utf-8");
-    return ignore().add(content);
-  } catch {
-    return null;
-  }
+  const file = Bun.file(filePath);
+  if (!(await file.exists())) return null;
+  const content = await file.text();
+  return ignore().add(content);
 }
 
 /**
@@ -35,16 +33,15 @@ async function loadIgnoreFile(filePath: string): Promise<Ignore | null> {
  */
 async function getDirOneliner(dirPath: string): Promise<string | null> {
   for (const filename of [".oneliner", ".oneliner.txt"]) {
-    try {
-      const content = await fs.readFile(join(dirPath, filename), "utf-8");
-      const trimmed = content.trim();
-      if (trimmed) {
-        const truncated =
-          trimmed.length > 80 ? `${trimmed.slice(0, 77)}...` : trimmed;
-        return `# ${truncated}`;
-      }
-    } catch {
-      // File doesn't exist, try next
+    const file = Bun.file(join(dirPath, filename));
+    if (!(await file.exists())) continue;
+
+    const content = await file.text();
+    const trimmed = content.trim();
+    if (trimmed) {
+      const truncated =
+        trimmed.length > 80 ? `${trimmed.slice(0, 77)}...` : trimmed;
+      return `# ${truncated}`;
     }
   }
   return null;
@@ -55,21 +52,37 @@ async function getDirOneliner(dirPath: string): Promise<string | null> {
  * Returns format: "# description" or null if no marker found.
  */
 async function getFileInlineComment(filePath: string): Promise<string | null> {
-  try {
-    const content = await fs.readFile(filePath, "utf-8");
-    const oneliner = extractOneliner(content);
+  const file = Bun.file(filePath);
+  if (!(await file.exists())) return null;
 
-    if (oneliner) {
-      // Truncate if too long
-      const truncated =
-        oneliner.length > 80 ? `${oneliner.slice(0, 77)}...` : oneliner;
-      return `# ${truncated}`;
-    }
+  const content = await file.text();
+  const oneliner = extractOneliner(content);
 
-    return null;
-  } catch {
-    return null;
+  if (oneliner) {
+    const truncated =
+      oneliner.length > 80 ? `${oneliner.slice(0, 77)}...` : oneliner;
+    return `# ${truncated}`;
   }
+
+  return null;
+}
+
+/**
+ * Safely read a directory, returning empty array if it doesn't exist.
+ */
+async function safeReaddir(path: string): Promise<Dirent[]> {
+  const file = Bun.file(path);
+  if (!(await file.exists())) return [];
+  return fs.readdir(path, { withFileTypes: true });
+}
+
+/**
+ * Safely stat a path, returning null if it doesn't exist.
+ */
+async function safeStat(path: string) {
+  const file = Bun.file(path);
+  if (!(await file.exists())) return null;
+  return fs.stat(path);
 }
 
 /**
@@ -100,12 +113,8 @@ export async function generateFileTree(
   ): Promise<string[]> => {
     if (depth > maxDepth) return [];
 
-    let entries: Dirent[];
-    try {
-      entries = await fs.readdir(dir, { withFileTypes: true });
-    } catch {
-      return [];
-    }
+    const entries = await safeReaddir(dir);
+    if (entries.length === 0) return [];
 
     const lines: string[] = [];
 
@@ -124,12 +133,9 @@ export async function generateFileTree(
       let isDir = entry.isDirectory();
 
       if (entry.isSymbolicLink()) {
-        try {
-          const stat = await fs.stat(fullPath);
-          isDir = stat.isDirectory();
-        } catch {
-          continue; // Skip broken symlinks
-        }
+        const stat = await safeStat(fullPath);
+        if (!stat) continue; // Skip broken symlinks
+        isDir = stat.isDirectory();
       }
 
       // Check against .ignore patterns using relative path from root
@@ -169,19 +175,14 @@ export async function generateFileTree(
     return lines;
   };
 
-  try {
-    // Check if directory exists first
-    const stat = await fs.stat(directory);
-    if (!stat.isDirectory()) return "";
+  // Check if directory exists first
+  const stat = await safeStat(directory);
+  if (!stat?.isDirectory()) return "";
 
-    const fileLines = await collectFiles(directory, 1);
+  const fileLines = await collectFiles(directory, 1);
 
-    // Sort alphabetically for consistent output
-    fileLines.sort((a, b) => a.localeCompare(b));
+  // Sort alphabetically for consistent output
+  fileLines.sort((a, b) => a.localeCompare(b));
 
-    return fileLines.join("\n");
-  } catch (error) {
-    logWarning(`Failed to generate file list for ${directory}:`, error);
-    return "";
-  }
+  return fileLines.join("\n");
 }

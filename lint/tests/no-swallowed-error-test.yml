@@ -1,0 +1,46 @@
+id: no-swallowed-error
+valid:
+  # Return statement makes intent explicit
+  - |
+    try {
+      doSomething();
+    } catch {
+      return null;
+    }
+  # Throw statement re-throws or wraps error
+  - |
+    try {
+      doSomething();
+    } catch (e) {
+      throw new Error("Failed: " + e);
+    }
+  # Continue in a loop is explicit
+  - |
+    for (const item of items) {
+      try {
+        process(item);
+      } catch {
+        continue;
+      }
+    }
+  # Expression statement (logging, assignment, etc)
+  - |
+    try {
+      doSomething();
+    } catch (e) {
+      console.error(e);
+    }
+invalid:
+  # Empty catch with only comment
+  - |
+    try {
+      doSomething();
+    } catch {
+      // Ignore error
+    }
+  # Completely empty catch
+  - |
+    try {
+      doSomething();
+    } catch {
+    }

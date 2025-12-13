@@ -1,3 +1,4 @@
+import { existsSync } from "fs";
 import * as os from "os";
 import * as path from "path";
 
@@ -24,13 +25,8 @@ export function findProjectRoot(): string | null {
     // Check for common project indicators
     const gitDir = path.join(dir, ".git");
     const openmodulesDir = path.join(dir, ".engrams");
-    try {
-      const fs = require("fs");
-      if (fs.existsSync(gitDir) || fs.existsSync(openmodulesDir)) {
-        return dir;
-      }
-    } catch {
-      // Continue searching
+    if (existsSync(gitDir) || existsSync(openmodulesDir)) {
+      return dir;
     }
     dir = path.dirname(dir);
   }

@@ -3,6 +3,7 @@
   self,
   treefmt-nix,
   imp-fmt-lib,
+  rootSrc,
   ...
 }:
 let
@@ -19,4 +20,10 @@ let
 in
 {
   formatting = formatterEval.config.build.check self;
+
+  ast-grep = pkgs.runCommand "ast-grep-check" { } ''
+    cd ${rootSrc}
+    ${pkgs.ast-grep}/bin/ast-grep test --skip-snapshot-tests
+    touch $out
+  '';
 }

@@ -1,0 +1,14 @@
+id: no-await-in-promise-all
+language: typescript
+severity: error
+message: "Don't use await inside Promise.all array - it defeats parallelization"
+rule:
+  pattern: await $A
+  inside:
+    pattern: Promise.all($_)
+    stopBy:
+      not:
+        any:
+          - kind: array
+          - kind: arguments
+fix: $A

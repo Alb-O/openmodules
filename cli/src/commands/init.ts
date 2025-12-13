@@ -76,21 +76,13 @@ export const init = command({
 
     // Configure auto-fetch of engrams index for local projects
     if (!isGlobal) {
-      try {
-        configureAutoFetch(targetDir);
+      if (configureAutoFetch(targetDir)) {
         console.log(pc.dim("  Configured auto-fetch for refs/engrams/*"));
 
         // Try to fetch the index if it exists on remote
-        if (!indexExists(targetDir)) {
-          try {
-            fetchIndex(targetDir);
-            console.log(pc.dim("  Fetched engram index from remote"));
-          } catch {
-            // Index doesn't exist on remote yet, that's fine
-          }
+        if (!indexExists(targetDir) && fetchIndex(targetDir)) {
+          console.log(pc.dim("  Fetched engram index from remote"));
         }
-      } catch {
-        // Not a git repo or no remote, skip
       }
     }
   },

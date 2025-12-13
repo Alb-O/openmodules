@@ -112,9 +112,10 @@ export const remove = command({
         fs.rmSync(targetDir, { recursive: true, force: true });
         console.log(pc.green(`✓ Removed: ${name}`));
       }
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { message?: string; stderr?: Buffer };
       const errorMessage =
-        error?.message || error?.stderr?.toString() || String(error);
+        err?.message || err?.stderr?.toString() || String(error);
       console.error(pc.red("Failed to remove engram:"));
       console.error(pc.dim(errorMessage));
       process.exit(1);

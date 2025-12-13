@@ -1,10 +1,33 @@
 import * as fs from "fs";
 import * as path from "path";
-import * as os from "os";
 import * as crypto from "crypto";
-import { execSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 import pc from "picocolors";
-import { getCacheDir, formatBytes, getDirSize } from "./index";
+import { getCacheDir, getDirSize } from "./index";
+
+/**
+ * Run a git command and return stdout, or null if it fails.
+ */
+function git(args: string[], cwd: string): string | null {
+  const result = spawnSync("git", args, {
+    cwd,
+    encoding: "utf-8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  if (result.status !== 0) return null;
+  return (result.stdout as string).trim();
+}
+
+/**
+ * Run a git command and return success/failure.
+ */
+function gitOk(args: string[], cwd: string): boolean {
+  const result = spawnSync("git", args, {
+    cwd,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  return result.status === 0;
+}
 
 /**
  * Convert a git URL to a cache path.
@@ -63,10 +86,11 @@ export function ensureCached(
         cwd: cachePath,
         ...quiet,
       });
-    } catch (error: any) {
+    } catch (error) {
       // Fetch failed - warn but continue with stale cache
+      const err = error as { stderr?: Buffer; message?: string };
       const errorMsg =
-        error?.stderr?.toString() || error?.message || "Unknown error";
+        err?.stderr?.toString() || err?.message || "Unknown error";
       console.warn(pc.yellow(`Warning: Failed to update cache for ${url}`));
       console.warn(pc.dim(`  ${errorMsg.trim()}`));
       console.warn(pc.dim("  Using potentially stale cached version"));
@@ -79,9 +103,10 @@ export function ensureCached(
     }
     try {
       execSync(`git clone --bare ${url} ${cachePath}`, quiet);
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { stderr?: Buffer; message?: string };
       const errorMsg =
-        error?.stderr?.toString() || error?.message || "Unknown error";
+        err?.stderr?.toString() || err?.message || "Unknown error";
       throw new Error(
         `Failed to clone ${url} into cache:\n  ${errorMsg.trim()}`,
       );
@@ -130,15 +155,8 @@ export function submoduleAddFromCache(
     },
   );
 
-  // Initialize the submodule
-  try {
-    execSync(`git submodule update --init ${relativePath}`, {
-      cwd: projectRoot,
-      stdio: "pipe",
-    });
-  } catch {
-    // May fail if repo has unusual state, that's ok
-  }
+  // Initialize the submodule - may fail if repo has unusual state, that's ok
+  gitOk(["submodule", "update", "--init", relativePath], projectRoot);
 }
 
 /**
@@ -162,17 +180,11 @@ export function listCachedRepos(): Array<{
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         if (entry.name.endsWith(".git")) {
-          // This is a bare repo
-          try {
-            const url = execSync("git config --get remote.origin.url", {
-              cwd: fullPath,
-              encoding: "utf-8",
-              stdio: ["pipe", "pipe", "pipe"],
-            }).trim();
+          // This is a bare repo - get URL or skip if not valid
+          const url = git(["config", "--get", "remote.origin.url"], fullPath);
+          if (url) {
             const size = getDirSize(fullPath);
             results.push({ path: fullPath, url, size });
-          } catch {
-            // Not a valid git repo, skip
           }
         } else {
           walkDir(fullPath);
