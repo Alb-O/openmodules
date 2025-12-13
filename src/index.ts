@@ -27,7 +27,10 @@ const ModulesPlugin: Plugin = async (input) => {
                 .map((matcher) => matcher.toolName),
         );
         const matchableTriggers = triggerMatchers.filter(
-            (matcher) => matcher.regexes.length > 0,
+            (matcher) =>
+                matcher.anyMsgRegexes.length > 0 ||
+                matcher.userMsgRegexes.length > 0 ||
+                matcher.agentMsgRegexes.length > 0,
         );
         const sessionTriggers = new Map<string, Set<string>>();
 
@@ -84,6 +87,17 @@ const ModulesPlugin: Plugin = async (input) => {
                 .join("\n");
         };
 
+        const extractAgentText = (
+            parts: { type: string; text?: string; synthetic?: boolean }[] = [],
+        ): string => {
+            return parts
+                .filter((part) => part.type === "text" && (part as any).synthetic === true)
+                .map((part) =>
+                    "text" in part && typeof part.text === "string" ? part.text : "",
+                )
+                .join("\n");
+        };
+
         const extractAllText = (
             parts: { type: string; text?: string }[] = [],
         ): string => {
@@ -106,12 +120,22 @@ const ModulesPlugin: Plugin = async (input) => {
                 }
 
                 const userText = extractUserText(output.parts as any);
+                const agentText = extractAgentText(output.parts as any);
                 const allText = extractAllText(output.parts as any);
 
                 for (const matcher of matchableTriggers) {
-                    // Use allText (includes AI) only if matchAiMessages is true, otherwise userText only
-                    const textToMatch = matcher.matchAiMessages ? allText : userText;
-                    if (textToMatch.trim() && matcher.regexes.some((regex) => regex.test(textToMatch))) {
+                    // Check any-msg triggers against all text
+                    if (allText.trim() && matcher.anyMsgRegexes.some((regex) => regex.test(allText))) {
+                        active.add(matcher.toolName);
+                        continue;
+                    }
+                    // Check user-msg triggers against user text only
+                    if (userText.trim() && matcher.userMsgRegexes.some((regex) => regex.test(userText))) {
+                        active.add(matcher.toolName);
+                        continue;
+                    }
+                    // Check agent-msg triggers against agent text only
+                    if (agentText.trim() && matcher.agentMsgRegexes.some((regex) => regex.test(agentText))) {
                         active.add(matcher.toolName);
                     }
                 }

@@ -18,19 +18,27 @@ export interface Module {
     content: string;
     /** Path to the openmodule.toml manifest */
     manifestPath: string;
-    /** Phrases/words that trigger module visibility when they appear in context */
-    contextTriggers?: string[];
-    /** Whether to also match triggers in AI messages (default: false, user messages only) */
-    matchAiMessages?: boolean;
+    /** Trigger configuration for progressive module discovery */
+    triggers?: {
+        /** Triggers that match any message (user or agent) */
+        anyMsg?: string[];
+        /** Triggers that only match user messages */
+        userMsg?: string[];
+        /** Triggers that only match agent messages */
+        agentMsg?: string[];
+    };
 }
 
-/** Compiled matcher derived from a module's context-triggers */
+/** Compiled matcher derived from a module's triggers */
 export interface ContextTriggerMatcher {
     toolName: string;
-    regexes: RegExp[];
+    /** Regexes that match any message */
+    anyMsgRegexes: RegExp[];
+    /** Regexes that only match user messages */
+    userMsgRegexes: RegExp[];
+    /** Regexes that only match agent messages */
+    agentMsgRegexes: RegExp[];
     alwaysVisible: boolean;
-    /** Whether to also match triggers in AI messages (default: false) */
-    matchAiMessages: boolean;
 }
 
 const WILDCARD_PATTERN = /[*?\[]/;
@@ -152,15 +160,27 @@ export function compileContextTrigger(pattern: string): RegExp[] {
 
 export function buildContextTriggerMatchers(modules: Module[]): ContextTriggerMatcher[] {
     return modules.map((module) => {
-        const regexes = (module.contextTriggers ?? []).flatMap((trigger) =>
+        const anyMsgRegexes = (module.triggers?.anyMsg ?? []).flatMap((trigger) =>
+            compileContextTrigger(trigger),
+        );
+        const userMsgRegexes = (module.triggers?.userMsg ?? []).flatMap((trigger) =>
+            compileContextTrigger(trigger),
+        );
+        const agentMsgRegexes = (module.triggers?.agentMsg ?? []).flatMap((trigger) =>
             compileContextTrigger(trigger),
         );
 
+        const hasTriggers =
+            anyMsgRegexes.length > 0 ||
+            userMsgRegexes.length > 0 ||
+            agentMsgRegexes.length > 0;
+
         return {
             toolName: module.toolName,
-            regexes,
-            alwaysVisible: !(module.contextTriggers && module.contextTriggers.length > 0),
-            matchAiMessages: module.matchAiMessages ?? false,
+            anyMsgRegexes,
+            userMsgRegexes,
+            agentMsgRegexes,
+            alwaysVisible: !hasTriggers,
         };
     });
 }
@@ -185,10 +205,12 @@ const ModuleManifestSchema = z.object({
     /** Trigger configuration for progressive module discovery */
     triggers: z
         .object({
-            /** Phrases/words that trigger module visibility when they appear in context */
-            context: z.array(z.string()).optional(),
-            /** Whether to also match triggers in AI messages (default: false, user messages only) */
-            "match-ai-messages": z.boolean().optional(),
+            /** Triggers that match any message (user or agent) */
+            "any-msg": z.array(z.string()).optional(),
+            /** Triggers that only match user messages */
+            "user-msg": z.array(z.string()).optional(),
+            /** Triggers that only match agent messages */
+            "agent-msg": z.array(z.string()).optional(),
         })
         .optional(),
     "allowed-tools": z.array(z.string()).optional(),
@@ -287,14 +309,25 @@ export async function parseModule(
             }
         }
 
+        const triggers = parsed.data.triggers;
+        const hasTriggers =
+            (triggers?.["any-msg"]?.length ?? 0) > 0 ||
+            (triggers?.["user-msg"]?.length ?? 0) > 0 ||
+            (triggers?.["agent-msg"]?.length ?? 0) > 0;
+
         return {
             name: parsed.data.name,
             directory: moduleDirectory,
             toolName: generateToolName(manifestPath, baseDir),
             description: parsed.data.description,
             allowedTools: parsed.data["allowed-tools"],
-            contextTriggers: parsed.data.triggers?.context,
-            matchAiMessages: parsed.data.triggers?.["match-ai-messages"],
+            triggers: hasTriggers
+                ? {
+                      anyMsg: triggers?.["any-msg"],
+                      userMsg: triggers?.["user-msg"],
+                      agentMsg: triggers?.["agent-msg"],
+                  }
+                : undefined,
             metadata: parsed.data.metadata,
             license: parsed.data.license,
             content: promptContent.trim(),

@@ -65,27 +65,32 @@ url = "https://github.com/you"
 
 # Optional: trigger configuration for progressive module discovery
 [triggers]
-context = ["database backup", "backup script", "db dump"]
+user-msg = ["database backup", "backup script", "db dump"]
 ```
 
 ### Context Triggers
 
-Modules can specify `triggers.context` - phrases or words that, when detected in the conversation context, make the module "visible" (shown in available tools list). Discovery is progressive: module tools stay hidden until a trigger matches; modules without triggers remain visible.
+Modules can specify triggers that control when they become "visible" (shown in available tools list). Discovery is progressive: module tools stay hidden until a trigger matches; modules without triggers remain always visible.
+
+The `[triggers]` section supports three arrays for fine-grained control:
+
+- `user-msg` - triggers that only match user messages (most common)
+- `agent-msg` - triggers that only match agent/AI messages and tool output
+- `any-msg` - triggers that match any message regardless of source
+
+```toml
+[triggers]
+# Common case: activate when user mentions these phrases
+user-msg = ["docstring{s,}", "documentation"]
+
+# Activate when AI mentions file types (e.g., in directory listings)
+agent-msg = [".pdf", "pdf document"]
+
+# Activate on any mention, regardless of source
+any-msg = ["database backup"]
+```
 
 Trigger patterns use git-style globs (including brace expansion), so `docstring{s,}` matches both `docstring` and `docstrings`. Patterns without wildcards (`*`, `?`, or character classes) only match whole words separated by non-alphanumeric boundaries (spaces, `_`, `-`, punctuation). Add a wildcard when you need substring matching.
-
-```toml
-[triggers]
-context = [".pdf", "pdf file", "pdf document", "docstring{s,}"]
-```
-
-By default, triggers only match user messages. Set `match-ai-messages = true` to also match AI responses and tool output. This is useful for file-type detection modules where seeing extensions in directory listings or AI analysis should activate the module:
-
-```toml
-[triggers]
-context = [".pdf", "pdf document"]
-match-ai-messages = true
-```
 
 ### Prompt File
 

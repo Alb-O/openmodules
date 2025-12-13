@@ -60,7 +60,7 @@ async function createModule(
     manifestLines.push("");
     manifestLines.push("[triggers]");
     manifestLines.push(
-      `context = [${triggers.map((t) => `"${t}"`).join(", ")}]`
+      `user-msg = [${triggers.map((t) => `"${t}"`).join(", ")}]`
     );
   }
 

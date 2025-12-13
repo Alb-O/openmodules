@@ -143,7 +143,7 @@ describe("modules helpers", () => {
           description: "Docs",
           content: "docs",
           manifestPath: "/tmp/docs/openmodule.toml",
-          contextTriggers: ["docstring{s,}"],
+          triggers: { userMsg: ["docstring{s,}"] },
         },
         {
           name: "AlwaysOn",
@@ -163,23 +163,22 @@ describe("modules helpers", () => {
 
       const text = "Need docstrings for this module";
       const triggered = matchers
-        .filter((matcher) => matcher.regexes.some((regex) => regex.test(text)))
+        .filter((matcher) => matcher.userMsgRegexes.some((regex) => regex.test(text)))
         .map((matcher) => matcher.toolName);
 
       expect(triggered).toContain("openmodule_docs");
     });
 
-    it("builds matchers with matchAiMessages flag", () => {
+    it("builds matchers with separate regex arrays for each trigger type", () => {
       const modules: Module[] = [
         {
           name: "FileDetector",
           directory: "/tmp/file-detector",
           toolName: "openmodule_file_detector",
-          description: "Detects file types from AI output",
+          description: "Detects file types from any message",
           content: "detector",
           manifestPath: "/tmp/file-detector/openmodule.toml",
-          contextTriggers: [".pdf", "pdf file"],
-          matchAiMessages: true,
+          triggers: { anyMsg: [".pdf", "pdf file"] },
         },
         {
           name: "UserOnly",
@@ -188,7 +187,16 @@ describe("modules helpers", () => {
           description: "Only triggers on user messages",
           content: "user only",
           manifestPath: "/tmp/user-only/openmodule.toml",
-          contextTriggers: ["help me"],
+          triggers: { userMsg: ["help me"] },
+        },
+        {
+          name: "AgentOnly",
+          directory: "/tmp/agent-only",
+          toolName: "openmodule_agent_only",
+          description: "Only triggers on agent messages",
+          content: "agent only",
+          manifestPath: "/tmp/agent-only/openmodule.toml",
+          triggers: { agentMsg: ["found error"] },
         },
       ];
 
@@ -196,23 +204,31 @@ describe("modules helpers", () => {
 
       const fileDetector = matchers.find((m) => m.toolName === "openmodule_file_detector");
       const userOnly = matchers.find((m) => m.toolName === "openmodule_user_only");
+      const agentOnly = matchers.find((m) => m.toolName === "openmodule_agent_only");
 
-      expect(fileDetector?.matchAiMessages).toBe(true);
-      expect(userOnly?.matchAiMessages).toBe(false);
+      expect(fileDetector?.anyMsgRegexes.length).toBeGreaterThan(0);
+      expect(fileDetector?.userMsgRegexes.length).toBe(0);
+      expect(fileDetector?.agentMsgRegexes.length).toBe(0);
+
+      expect(userOnly?.anyMsgRegexes.length).toBe(0);
+      expect(userOnly?.userMsgRegexes.length).toBeGreaterThan(0);
+      expect(userOnly?.agentMsgRegexes.length).toBe(0);
+
+      expect(agentOnly?.anyMsgRegexes.length).toBe(0);
+      expect(agentOnly?.userMsgRegexes.length).toBe(0);
+      expect(agentOnly?.agentMsgRegexes.length).toBeGreaterThan(0);
     });
 
-    it("matchAiMessages controls which text source is matched", () => {
-      // Simulate the hook logic: user-only matcher uses userText, AI matcher uses allText
+    it("trigger arrays control which text source is matched", () => {
       const modules: Module[] = [
         {
-          name: "AIAware",
-          directory: "/tmp/ai-aware",
-          toolName: "openmodule_ai_aware",
-          description: "Triggers on AI output too",
-          content: "ai aware",
-          manifestPath: "/tmp/ai-aware/openmodule.toml",
-          contextTriggers: ["detected pattern"],
-          matchAiMessages: true,
+          name: "AnyMsg",
+          directory: "/tmp/any-msg",
+          toolName: "openmodule_any_msg",
+          description: "Triggers on any message",
+          content: "any msg",
+          manifestPath: "/tmp/any-msg/openmodule.toml",
+          triggers: { anyMsg: ["detected pattern"] },
         },
         {
           name: "UserOnly",
@@ -221,17 +237,25 @@ describe("modules helpers", () => {
           description: "Only triggers on user messages",
           content: "user only",
           manifestPath: "/tmp/user-only/openmodule.toml",
-          contextTriggers: ["detected pattern"],
-          matchAiMessages: false,
+          triggers: { userMsg: ["detected pattern"] },
+        },
+        {
+          name: "AgentOnly",
+          directory: "/tmp/agent-only",
+          toolName: "openmodule_agent_only",
+          description: "Only triggers on agent messages",
+          content: "agent only",
+          manifestPath: "/tmp/agent-only/openmodule.toml",
+          triggers: { agentMsg: ["detected pattern"] },
         },
       ];
 
       const matchers = buildContextTriggerMatchers(modules);
 
-      // Simulate message parts: user text is non-synthetic, AI text is synthetic
+      // Simulate message parts: user text is non-synthetic, agent text is synthetic
       const parts = [
         { type: "text", text: "What files do you see?", synthetic: false }, // user
-        { type: "text", text: "I found a detected pattern in the output", synthetic: true }, // AI
+        { type: "text", text: "I found a detected pattern in the output", synthetic: true }, // agent
       ];
 
       // Extract text like the hook does
@@ -240,37 +264,50 @@ describe("modules helpers", () => {
         .map((p) => p.text)
         .join("\n");
 
+      const agentText = parts
+        .filter((p) => p.type === "text" && p.synthetic)
+        .map((p) => p.text)
+        .join("\n");
+
       const allText = parts
         .filter((p) => p.type === "text")
         .map((p) => p.text)
         .join("\n");
 
-      // Check which matchers would trigger based on their matchAiMessages setting
+      // Check which matchers would trigger based on their trigger type
       const triggered = new Set<string>();
       for (const matcher of matchers) {
-        const textToMatch = matcher.matchAiMessages ? allText : userText;
-        if (matcher.regexes.some((regex) => regex.test(textToMatch))) {
+        if (matcher.anyMsgRegexes.some((regex) => regex.test(allText))) {
+          triggered.add(matcher.toolName);
+          continue;
+        }
+        if (matcher.userMsgRegexes.some((regex) => regex.test(userText))) {
+          triggered.add(matcher.toolName);
+          continue;
+        }
+        if (matcher.agentMsgRegexes.some((regex) => regex.test(agentText))) {
           triggered.add(matcher.toolName);
         }
       }
 
-      // AI-aware module should trigger (pattern is in allText)
-      expect(triggered.has("openmodule_ai_aware")).toBe(true);
-      // User-only module should NOT trigger (pattern is not in userText)
+      // any-msg should trigger (pattern is in allText)
+      expect(triggered.has("openmodule_any_msg")).toBe(true);
+      // user-only should NOT trigger (pattern is not in userText)
       expect(triggered.has("openmodule_user_only")).toBe(false);
+      // agent-only should trigger (pattern is in agentText)
+      expect(triggered.has("openmodule_agent_only")).toBe(true);
     });
 
-    it("both matchers trigger when pattern is in user text", () => {
+    it("user-msg triggers match when pattern is in user text", () => {
       const modules: Module[] = [
         {
-          name: "AIAware",
-          directory: "/tmp/ai-aware",
-          toolName: "openmodule_ai_aware",
-          description: "Triggers on AI output too",
-          content: "ai aware",
-          manifestPath: "/tmp/ai-aware/openmodule.toml",
-          contextTriggers: ["user phrase"],
-          matchAiMessages: true,
+          name: "AnyMsg",
+          directory: "/tmp/any-msg",
+          toolName: "openmodule_any_msg",
+          description: "Triggers on any message",
+          content: "any msg",
+          manifestPath: "/tmp/any-msg/openmodule.toml",
+          triggers: { anyMsg: ["user phrase"] },
         },
         {
           name: "UserOnly",
@@ -279,8 +316,16 @@ describe("modules helpers", () => {
           description: "Only triggers on user messages",
           content: "user only",
           manifestPath: "/tmp/user-only/openmodule.toml",
-          contextTriggers: ["user phrase"],
-          matchAiMessages: false,
+          triggers: { userMsg: ["user phrase"] },
+        },
+        {
+          name: "AgentOnly",
+          directory: "/tmp/agent-only",
+          toolName: "openmodule_agent_only",
+          description: "Only triggers on agent messages",
+          content: "agent only",
+          manifestPath: "/tmp/agent-only/openmodule.toml",
+          triggers: { agentMsg: ["user phrase"] },
         },
       ];
 
@@ -295,6 +340,11 @@ describe("modules helpers", () => {
         .map((p) => p.text)
         .join("\n");
 
+      const agentText = parts
+        .filter((p) => p.type === "text" && p.synthetic)
+        .map((p) => p.text)
+        .join("\n");
+
       const allText = parts
         .filter((p) => p.type === "text")
         .map((p) => p.text)
@@ -302,15 +352,24 @@ describe("modules helpers", () => {
 
       const triggered = new Set<string>();
       for (const matcher of matchers) {
-        const textToMatch = matcher.matchAiMessages ? allText : userText;
-        if (matcher.regexes.some((regex) => regex.test(textToMatch))) {
+        if (matcher.anyMsgRegexes.some((regex) => regex.test(allText))) {
+          triggered.add(matcher.toolName);
+          continue;
+        }
+        if (matcher.userMsgRegexes.some((regex) => regex.test(userText))) {
+          triggered.add(matcher.toolName);
+          continue;
+        }
+        if (matcher.agentMsgRegexes.some((regex) => regex.test(agentText))) {
           triggered.add(matcher.toolName);
         }
       }
 
-      // Both should trigger since pattern is in user text (which is subset of allText)
-      expect(triggered.has("openmodule_ai_aware")).toBe(true);
+      // any-msg and user-only should trigger
+      expect(triggered.has("openmodule_any_msg")).toBe(true);
       expect(triggered.has("openmodule_user_only")).toBe(true);
+      // agent-only should NOT trigger (pattern is not in agent text)
+      expect(triggered.has("openmodule_agent_only")).toBe(false);
     });
   });
 
