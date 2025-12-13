@@ -11,6 +11,12 @@ import {
   getSupportedDomains,
 } from "../utils";
 import { submoduleAddFromCache, cloneFromCache, isCached } from "../cache";
+import {
+  readIndex,
+  writeIndex,
+  parseEngramToml,
+  getSubmoduleUrl,
+} from "../index-ref";
 
 export const add = command({
   name: "add",
@@ -170,6 +176,9 @@ export const add = command({
           });
         }
         console.log(pc.green(`✓ Added as submodule: ${targetDir}`));
+
+        // Update the index with the new engram
+        updateIndexAfterAdd(projectRoot!, moduleName, parsed.url);
       } else {
         // Clone directly (for global or when --clone is specified)
         if (noCache) {
@@ -193,3 +202,34 @@ export const add = command({
     }
   },
 });
+
+/**
+ * Update the engram index after adding a new engram
+ */
+function updateIndexAfterAdd(
+  projectRoot: string,
+  moduleName: string,
+  url: string,
+): void {
+  const tomlPath = path.join(projectRoot, ".engrams", moduleName, "engram.toml");
+
+  if (!fs.existsSync(tomlPath)) {
+    console.log(pc.dim("  No engram.toml found, skipping index update"));
+    return;
+  }
+
+  const entry = parseEngramToml(tomlPath);
+  if (!entry) {
+    console.log(pc.dim("  Could not parse engram.toml, skipping index update"));
+    return;
+  }
+
+  entry.url = url;
+
+  // Read existing index or create new one
+  const index = readIndex(projectRoot) || {};
+  index[moduleName] = entry;
+
+  writeIndex(projectRoot, index);
+  console.log(pc.dim("  Updated refs/engrams/index"));
+}

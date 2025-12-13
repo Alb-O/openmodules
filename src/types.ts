@@ -22,6 +22,10 @@ export interface Module {
   parentToolName?: string;
   /** Tool names of direct child modules */
   childToolNames?: string[];
+  /** True if this module is from the index but not yet initialized (submodule not cloned) */
+  lazy?: boolean;
+  /** URL to clone/init the module from (for lazy modules) */
+  url?: string;
 }
 
 /** Compiled matcher derived from a module's triggers */

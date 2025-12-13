@@ -10,6 +10,9 @@ export { generateToolName, parseModule } from "./manifest";
 export {
   findModuleFiles,
   discoverModules,
+  discoverModulesWithLazy,
   getDefaultModulePaths,
+  readIndexRef,
+  getModulesFromIndex,
 } from "./discovery";
 export { generateFileTree } from "./file-tree";

@@ -1,9 +1,10 @@
 import os from "os";
 import { promises as fs, Dirent } from "fs";
 import { dirname, join, sep } from "path";
+import { execSync } from "child_process";
 import type { Module } from "./types";
 import { logWarning } from "./logging";
-import { MANIFEST_FILENAME, parseModule } from "./manifest";
+import { MANIFEST_FILENAME, parseModule, generateToolName } from "./manifest";
 
 /**
  * Finds all engram.toml files within a base path.
@@ -223,4 +224,168 @@ export function getDefaultModulePaths(rootDir: string): string[] {
     : join(os.homedir(), ".config", "engrams");
 
   return [globalModulesPath, join(rootDir, ".engrams")];
+}
+
+/** Entry from refs/engrams/index */
+interface IndexEntry {
+  name: string;
+  description: string;
+  version?: string;
+  url?: string;
+  triggers?: {
+    "any-msg"?: string[];
+    "user-msg"?: string[];
+    "agent-msg"?: string[];
+  };
+}
+
+type EngramIndex = Record<string, IndexEntry>;
+
+const INDEX_REF = "refs/engrams/index";
+
+/**
+ * Read the engram index from refs/engrams/index in a git repo
+ */
+export function readIndexRef(repoPath: string): EngramIndex | null {
+  try {
+    const content = execSync(`git cat-file -p ${INDEX_REF}`, {
+      cwd: repoPath,
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if a submodule directory has been initialized (has engram.toml)
+ */
+async function isSubmoduleInitialized(modulePath: string): Promise<boolean> {
+  try {
+    await fs.access(join(modulePath, MANIFEST_FILENAME));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Create stub Module objects for uninitialized engrams from the index.
+ * These have lazy=true and minimal content explaining how to init.
+ */
+export async function getModulesFromIndex(
+  repoPath: string,
+  engramsDir: string,
+): Promise<Module[]> {
+  const index = readIndexRef(repoPath);
+  if (!index) {
+    return [];
+  }
+
+  const lazyModules: Module[] = [];
+
+  for (const [key, entry] of Object.entries(index)) {
+    const modulePath = join(engramsDir, key);
+
+    // Skip if already initialized
+    if (await isSubmoduleInitialized(modulePath)) {
+      continue;
+    }
+
+    // Check if the directory exists (submodule registered but not cloned)
+    try {
+      await fs.access(modulePath);
+    } catch {
+      // Directory doesn't exist at all, skip
+      continue;
+    }
+
+    const toolName = generateToolName(modulePath, engramsDir);
+
+    const lazyContent = `# ${entry.name}
+
+${entry.description}
+
+---
+
+**This engram is not yet initialized.** To use it, run:
+
+\`\`\`bash
+engram lazy-init ${key}
+\`\`\`
+
+Or initialize via git:
+
+\`\`\`bash
+git submodule update --init ${modulePath}
+\`\`\`
+`;
+
+    const module: Module = {
+      name: entry.name,
+      directory: modulePath,
+      toolName,
+      description: entry.description,
+      content: lazyContent,
+      manifestPath: join(modulePath, MANIFEST_FILENAME),
+      lazy: true,
+      url: entry.url,
+    };
+
+    // Convert triggers
+    if (entry.triggers) {
+      module.triggers = {};
+      if (entry.triggers["any-msg"]) {
+        module.triggers.anyMsg = entry.triggers["any-msg"];
+      }
+      if (entry.triggers["user-msg"]) {
+        module.triggers.userMsg = entry.triggers["user-msg"];
+      }
+      if (entry.triggers["agent-msg"]) {
+        module.triggers.agentMsg = entry.triggers["agent-msg"];
+      }
+    }
+
+    lazyModules.push(module);
+  }
+
+  return lazyModules;
+}
+
+/**
+ * Enhanced module discovery that includes lazy modules from the index.
+ * Falls back to standard discovery if no index is found.
+ */
+export async function discoverModulesWithLazy(
+  basePaths: unknown,
+  repoPath?: string,
+): Promise<Module[]> {
+  // First, get normally initialized modules
+  const modules = await discoverModules(basePaths);
+
+  // If we have a repo path, try to get lazy modules from the index
+  if (repoPath) {
+    const paths = normalizeBasePaths(basePaths);
+    const localEngramsDir = paths.find((p) => p.includes(".engrams"));
+
+    if (localEngramsDir) {
+      try {
+        const lazyModules = await getModulesFromIndex(repoPath, localEngramsDir);
+
+        // Only add lazy modules that aren't already discovered
+        const existingToolNames = new Set(modules.map((m) => m.toolName));
+        for (const lazyModule of lazyModules) {
+          if (!existingToolNames.has(lazyModule.toolName)) {
+            modules.push(lazyModule);
+          }
+        }
+      } catch (error) {
+        logWarning("Failed to read engram index for lazy modules:", error);
+      }
+    }
+  }
+
+  return modules;
 }

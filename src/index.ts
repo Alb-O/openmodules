@@ -4,7 +4,7 @@ import os from "os";
 import { join } from "path";
 import {
   buildContextTriggerMatchers,
-  discoverModules,
+  discoverModulesWithLazy,
   generateFileTree,
   getDefaultModulePaths,
   logError,
@@ -25,8 +25,9 @@ function shortenPath(filePath: string): string {
 
 const ModulesPlugin: Plugin = async (input) => {
   try {
-    const modules = await discoverModules(
+    const modules = await discoverModulesWithLazy(
       getDefaultModulePaths(input.directory),
+      input.directory, // Pass root dir for index reading
     );
 
     if (modules.length === 0) {
@@ -92,7 +93,10 @@ const ModulesPlugin: Plugin = async (input) => {
       if (!module.toolName) continue;
 
       // Include human-readable name in description for agent visibility
-      const toolDescription = `${module.name}: ${module.description}`;
+      // Mark lazy (uninitialized) modules so the agent knows they need init
+      const toolDescription = module.lazy
+        ? `[NOT INITIALIZED] ${module.name}: ${module.description}`
+        : `${module.name}: ${module.description}`;
 
       tools[module.toolName] = tool({
         description: toolDescription,
@@ -110,6 +114,13 @@ const ModulesPlugin: Plugin = async (input) => {
               },
             });
           };
+
+          // For lazy modules, skip file tree (directory is empty) and use stored content
+          if (module.lazy) {
+            const preamble = `# Module: ${module.name} [NOT INITIALIZED]\n\nThis module's submodule has not been cloned yet.\n\n---\n\n`;
+            await sendSilentPrompt(`${preamble}${module.content}`);
+            return `Module "${module.name}" is not initialized. Run \`engram lazy-init ${module.name}\` to initialize it.`;
+          }
 
           const fileTree = await generateFileTree(module.directory, {
             includeMetadata: true,

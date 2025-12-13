@@ -5,6 +5,7 @@ import * as os from "os";
 import pc from "picocolors";
 import { installPlugin, getBundledPluginPath } from "../cache";
 import { findProjectRoot } from "../utils";
+import { configureAutoFetch, fetchIndex, indexExists } from "../index-ref";
 
 export const init = command({
   name: "init",
@@ -71,6 +72,26 @@ export const init = command({
     if (!fs.existsSync(openmodulesDir)) {
       fs.mkdirSync(openmodulesDir, { recursive: true });
       console.log(pc.dim(`  Created ${openmodulesDir}/`));
+    }
+
+    // Configure auto-fetch of engrams index for local projects
+    if (!isGlobal) {
+      try {
+        configureAutoFetch(targetDir);
+        console.log(pc.dim("  Configured auto-fetch for refs/engrams/*"));
+
+        // Try to fetch the index if it exists on remote
+        if (!indexExists(targetDir)) {
+          try {
+            fetchIndex(targetDir);
+            console.log(pc.dim("  Fetched engram index from remote"));
+          } catch {
+            // Index doesn't exist on remote yet, that's fine
+          }
+        }
+      } catch {
+        // Not a git repo or no remote, skip
+      }
     }
   },
 });

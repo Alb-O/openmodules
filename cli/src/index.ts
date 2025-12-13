@@ -5,6 +5,8 @@ import { list } from "./commands/list";
 import { remove } from "./commands/remove";
 import { cache } from "./commands/cache";
 import { init } from "./commands/init";
+import { sync } from "./commands/sync";
+import { lazyInit, showIndex } from "./commands/lazy";
 
 const app = subcommands({
   name: "engram",
@@ -16,6 +18,9 @@ const app = subcommands({
     list,
     remove,
     cache,
+    sync,
+    "lazy-init": lazyInit,
+    "show-index": showIndex,
   },
 });
 
