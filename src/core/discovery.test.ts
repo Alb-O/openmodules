@@ -4,7 +4,7 @@ import path from "node:path";
 import os from "node:os";
 
 import { discoverEngrams, findEngramFiles } from "./discovery";
-import { createEngram } from "./test-utils";
+import { createEngram } from "../test-utils";
 
 describe("discovery", () => {
   let tempDir: string;

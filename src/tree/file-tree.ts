@@ -2,8 +2,8 @@ import { promises as fs, Dirent } from "node:fs";
 import { join, relative } from "node:path";
 import os from "node:os";
 import ignore, { type Ignore } from "ignore";
-import type { FileTreeOptions } from "./types";
-import { logWarning } from "./logging";
+import type { FileTreeOptions } from "../core/types";
+import { logWarning } from "../logging";
 import { extractOneliner } from "./comment-parser";
 
 // Hide these files/directories by default. The manifest is already parsed, agent doesn't need to see it.

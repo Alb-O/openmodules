@@ -5,14 +5,14 @@ export type {
   FileTreeOptions,
   TriggerConfig,
   CompiledTriggerRegexes,
-} from "./types";
+} from "./core/types";
 export { logWarning, logError } from "./logging";
 export {
   expandBraces,
   compileContextTrigger,
   buildContextTriggerMatchers,
-} from "./triggers";
-export { generateToolName, parseEngram } from "./manifest";
+} from "./core/triggers";
+export { generateToolName, parseEngram } from "./core/manifest";
 export {
   findEngramFiles,
   discoverEngrams,
@@ -20,5 +20,5 @@ export {
   getDefaultEngramPaths,
   readIndexRef,
   getEngramsFromIndex,
-} from "./discovery";
-export { generateFileTree } from "./file-tree";
+} from "./core/discovery";
+export { generateFileTree } from "./tree/file-tree";

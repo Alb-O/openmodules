@@ -2,7 +2,7 @@ import * as TOML from "@iarna/toml";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { z } from "zod";
 import type { Engram, TriggerConfig } from "./types";
-import { logWarning, logError } from "./logging";
+import { logWarning, logError } from "../logging";
 
 /** Manifest filename at engram root */
 export const MANIFEST_FILENAME = "engram.toml";

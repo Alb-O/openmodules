@@ -1,0 +1,8 @@
+id: use-logical-or-assignment
+language: typescript
+severity: warning
+message: "Use ||= logical assignment operator"
+note: "ES2021: `$A = $A || $B` can be simplified to `$A ||= $B`"
+rule:
+  pattern: $A = $A || $B
+fix: $A ||= $B

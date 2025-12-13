@@ -4,7 +4,7 @@ import path from "node:path";
 import os from "node:os";
 
 import { generateToolName, parseEngram } from "./manifest";
-import { createEngram } from "./test-utils";
+import { createEngram } from "../test-utils";
 
 describe("manifest", () => {
   let tempDir: string;

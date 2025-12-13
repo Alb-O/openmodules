@@ -2,7 +2,7 @@ import os from "node:os";
 import { promises as fs, existsSync, Dirent } from "node:fs";
 import { dirname, join, sep } from "node:path";
 import type { Engram } from "./types";
-import { logWarning } from "./logging";
+import { logWarning } from "../logging";
 import { MANIFEST_FILENAME, parseEngram, generateToolName } from "./manifest";
 
 /**

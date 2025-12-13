@@ -5,3 +5,6 @@ dist/
 .direnv/
 *.min.*
 /result
+
+# ast-grep test snapshots (generated)
+lint/tests/__snapshots__/

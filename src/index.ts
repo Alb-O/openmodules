@@ -283,7 +283,7 @@ const EngramsPlugin: Plugin = async (input) => {
           ...(message.tools ?? {}),
         };
 
-        toolsConfig["engram_*"] = toolsConfig["engram_*"] ?? false;
+        toolsConfig["engram_*"] ??= false;
         for (const toolName of Object.keys(tools)) {
           toolsConfig[toolName] = false;
         }

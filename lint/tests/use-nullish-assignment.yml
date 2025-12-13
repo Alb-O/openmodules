@@ -1,0 +1,8 @@
+id: use-nullish-assignment
+valid:
+  - "a ??= b"
+  - "a = b ?? c"
+  - "a = c ?? a"
+invalid:
+  - "a = a ?? b"
+  - "obj.prop = obj.prop ?? defaultValue"

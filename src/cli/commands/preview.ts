@@ -4,7 +4,7 @@ import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import { info, fail, log } from "../../logging";
 import { getModulePaths, findProjectRoot, shortenPath } from "../utils";
-import { generateFileTree } from "../../file-tree";
+import { generateFileTree } from "../../tree/file-tree";
 
 interface Engram {
   name: string;
