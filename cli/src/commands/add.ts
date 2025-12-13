@@ -15,7 +15,6 @@ import {
   readIndex,
   writeIndex,
   parseEngramToml,
-  getSubmoduleUrl,
 } from "../index-ref";
 
 export const add = command({
@@ -71,137 +70,156 @@ export const add = command({
     const projectRoot = findProjectRoot();
     const paths = getModulePaths(projectRoot || undefined);
 
-    let targetDir: string;
     if (isGlobal) {
-      targetDir = path.join(paths.global, engramName);
-    } else {
-      if (!projectRoot) {
-        console.error(pc.red("Error: Not in a project directory"));
-        console.error(
-          pc.dim(
-            "Use --global to install globally, or run from a git repository",
-          ),
-        );
-        process.exit(1);
-      }
-      targetDir = path.join(paths.local!, engramName);
+      const targetDir = path.join(paths.global, engramName);
+      return handleAdd({ parsed, engramName, projectRoot, targetDir, isGlobal, clone, force, noCache });
     }
 
-    // Force clean any existing submodule state (handles broken/partial submodules)
-    if (force && !isGlobal && projectRoot) {
-      const relativePath = path.relative(projectRoot, targetDir);
-      try {
-        // Deinit if registered (ignore errors)
-        execSync(`git submodule deinit -f ${relativePath}`, {
-          cwd: projectRoot,
-          stdio: "pipe",
-        });
-      } catch {
-        // Ignore - may not be initialized
-      }
-      try {
-        // Remove from index (ignore errors)
-        execSync(`git rm -f ${relativePath}`, {
-          cwd: projectRoot,
-          stdio: "pipe",
-        });
-      } catch {
-        // Ignore - may not be in index
-      }
-      // Find the actual git dir (handles nested submodules)
-      let gitDir: string;
-      const dotGitPath = path.join(projectRoot, ".git");
-      if (fs.existsSync(dotGitPath) && fs.statSync(dotGitPath).isFile()) {
-        // This repo is itself a submodule - .git is a file pointing to the real location
-        const gitFileContent = fs.readFileSync(dotGitPath, "utf-8").trim();
-        const match = gitFileContent.match(/^gitdir:\s*(.+)$/);
-        if (match) {
-          gitDir = path.resolve(projectRoot, match[1]);
-        } else {
-          gitDir = dotGitPath;
-        }
-      } else {
-        gitDir = dotGitPath;
-      }
-      // Clean up modules directory
-      const gitModulesPath = path.join(gitDir, "modules", relativePath);
-      if (fs.existsSync(gitModulesPath)) {
-        fs.rmSync(gitModulesPath, { recursive: true, force: true });
-      }
-      // Remove directory if exists
-      if (fs.existsSync(targetDir)) {
-        fs.rmSync(targetDir, { recursive: true, force: true });
-      }
-      console.log(
-        pc.yellow(`Cleaned up existing engram state for ${engramName}`),
+    if (!projectRoot) {
+      console.error(pc.red("Error: Not in a project directory"));
+      console.error(
+        pc.dim(
+          "Use --global to install globally, or run from a git repository",
+        ),
       );
-    } else if (fs.existsSync(targetDir)) {
-      // Check if already exists (non-force mode)
-      console.error(pc.red(`Error: Engram already exists at ${targetDir}`));
-      console.error(pc.dim("Use --force to overwrite"));
       process.exit(1);
     }
 
-    // Ensure parent directory exists
-    const parentDir = path.dirname(targetDir);
-    if (!fs.existsSync(parentDir)) {
-      fs.mkdirSync(parentDir, { recursive: true });
-    }
-
-    console.log(
-      pc.blue(`Adding ${parsed.owner}/${parsed.repo} as ${engramName}...`),
-    );
-
-    const cached = isCached(parsed.url);
-    if (cached) {
-      console.log(pc.dim("Using cached repository..."));
-    }
-
-    try {
-      if (!clone && !isGlobal) {
-        // Add as submodule (default for local installs in git repos)
-        const relativePath = path.relative(projectRoot!, targetDir);
-        if (noCache) {
-          const forceFlag = force ? "--force " : "";
-          execSync(
-            `git submodule add ${forceFlag}${parsed.url} ${relativePath}`,
-            {
-              cwd: projectRoot!,
-              stdio: "inherit",
-            },
-          );
-        } else {
-          submoduleAddFromCache(parsed.url, relativePath, projectRoot!, {
-            force,
-          });
-        }
-        console.log(pc.green(`✓ Added as submodule: ${targetDir}`));
-
-        // Update the index with the new engram
-        updateIndexAfterAdd(projectRoot!, engramName, parsed.url);
-      } else {
-        // Clone directly (for global or when --clone is specified)
-        if (noCache) {
-          execSync(`git clone ${parsed.url} ${targetDir}`, {
-            stdio: "inherit",
-          });
-        } else {
-          cloneFromCache(parsed.url, targetDir);
-        }
-        console.log(pc.green(`✓ Cloned to: ${targetDir}`));
-      }
-    } catch (error: any) {
-      const errorMessage =
-        error?.message || error?.stderr?.toString() || String(error);
-      console.error(pc.red("Failed to add engram:"));
-      console.error(pc.dim(errorMessage));
-      if (error?.status) {
-        console.error(pc.dim(`Exit code: ${error.status}`));
-      }
-      process.exit(1);
-    }
+    const targetDir = path.join(paths.local!, engramName);
+    return handleAdd({ parsed, engramName, projectRoot, targetDir, isGlobal, clone, force, noCache });
   },
 });
+
+interface AddParams {
+  parsed: ReturnType<typeof parseRepoUrl> & {};
+  engramName: string;
+  projectRoot: string | null;
+  targetDir: string;
+  isGlobal: boolean;
+  clone: boolean;
+  force: boolean;
+  noCache: boolean;
+}
+
+async function handleAdd({ parsed, engramName, projectRoot, targetDir, isGlobal, clone, force, noCache }: AddParams) {
+  // Force clean any existing submodule state (handles broken/partial submodules)
+  if (force && !isGlobal && projectRoot) {
+    const relativePath = path.relative(projectRoot, targetDir);
+    try {
+      execSync(`git submodule deinit -f ${relativePath}`, {
+        cwd: projectRoot,
+        stdio: "pipe",
+      });
+    } catch {
+      // Ignore - may not be initialized
+    }
+    try {
+      execSync(`git rm -f ${relativePath}`, {
+        cwd: projectRoot,
+        stdio: "pipe",
+      });
+    } catch {
+      // Ignore - may not be in index
+    }
+    // Find the actual git dir (handles nested submodules)
+    const dotGitPath = path.join(projectRoot, ".git");
+    const gitDir = resolveGitDir(projectRoot, dotGitPath);
+    // Clean up modules directory
+    const gitModulesPath = path.join(gitDir, "modules", relativePath);
+    if (fs.existsSync(gitModulesPath)) {
+      fs.rmSync(gitModulesPath, { recursive: true, force: true });
+    }
+    // Remove directory if exists
+    if (fs.existsSync(targetDir)) {
+      fs.rmSync(targetDir, { recursive: true, force: true });
+    }
+    console.log(
+      pc.yellow(`Cleaned up existing engram state for ${engramName}`),
+    );
+  }
+
+  if (fs.existsSync(targetDir)) {
+    console.error(pc.red(`Error: Engram already exists at ${targetDir}`));
+    console.error(pc.dim("Use --force to overwrite"));
+    process.exit(1);
+  }
+
+  // Ensure parent directory exists
+  const parentDir = path.dirname(targetDir);
+  if (!fs.existsSync(parentDir)) {
+    fs.mkdirSync(parentDir, { recursive: true });
+  }
+
+  console.log(
+    pc.blue(`Adding ${parsed.owner}/${parsed.repo} as ${engramName}...`),
+  );
+
+  const cached = isCached(parsed.url);
+  if (cached) {
+    console.log(pc.dim("Using cached repository..."));
+  }
+
+  try {
+    if (!clone && !isGlobal) {
+      addAsSubmodule(parsed, projectRoot!, targetDir, force, noCache, engramName);
+    } else {
+      cloneDirect(parsed.url, targetDir, noCache);
+    }
+  } catch (error) {
+    const err = error as Error & { stderr?: Buffer; status?: number };
+    const errorMessage = err.message || err.stderr?.toString() || String(error);
+    console.error(pc.red("Failed to add engram:"));
+    console.error(pc.dim(errorMessage));
+    if (err.status) {
+      console.error(pc.dim(`Exit code: ${err.status}`));
+    }
+    process.exit(1);
+  }
+}
+
+function resolveGitDir(projectRoot: string, dotGitPath: string): string {
+  if (!fs.existsSync(dotGitPath) || !fs.statSync(dotGitPath).isFile()) {
+    return dotGitPath;
+  }
+  // This repo is itself a submodule - .git is a file pointing to the real location
+  const gitFileContent = fs.readFileSync(dotGitPath, "utf-8").trim();
+  const match = gitFileContent.match(/^gitdir:\s*(.+)$/);
+  if (match) {
+    return path.resolve(projectRoot, match[1]);
+  }
+  return dotGitPath;
+}
+
+function addAsSubmodule(
+  parsed: NonNullable<ReturnType<typeof parseRepoUrl>>,
+  projectRoot: string,
+  targetDir: string,
+  force: boolean,
+  noCache: boolean,
+  engramName: string,
+) {
+  const relativePath = path.relative(projectRoot, targetDir);
+  if (noCache) {
+    const forceFlag = force ? "--force " : "";
+    execSync(
+      `git submodule add ${forceFlag}${parsed.url} ${relativePath}`,
+      { cwd: projectRoot, stdio: "inherit" },
+    );
+  } else {
+    submoduleAddFromCache(parsed.url, relativePath, projectRoot, { force });
+  }
+  console.log(pc.green(`✓ Added as submodule: ${targetDir}`));
+  updateIndexAfterAdd(projectRoot, engramName, parsed.url);
+}
+
+function cloneDirect(url: string, targetDir: string, noCache: boolean) {
+  if (noCache) {
+    execSync(`git clone ${url} ${targetDir}`, { stdio: "inherit" });
+  } else {
+    cloneFromCache(url, targetDir);
+  }
+  console.log(pc.green(`✓ Cloned to: ${targetDir}`));
+}
 
 /**
  * Update the engram index after adding a new engram

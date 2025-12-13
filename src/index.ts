@@ -141,9 +141,7 @@ const EngramsPlugin: Plugin = async (input) => {
       parts: { type: string; text?: string; synthetic?: boolean }[] = [],
     ): string => {
       return parts
-        .filter(
-          (part) => part.type === "text" && (part as any).synthetic !== true,
-        )
+        .filter((part) => part.type === "text" && part.synthetic !== true)
         .map((part) =>
           "text" in part && typeof part.text === "string" ? part.text : "",
         )
@@ -154,9 +152,7 @@ const EngramsPlugin: Plugin = async (input) => {
       parts: { type: string; text?: string; synthetic?: boolean }[] = [],
     ): string => {
       return parts
-        .filter(
-          (part) => part.type === "text" && (part as any).synthetic === true,
-        )
+        .filter((part) => part.type === "text" && part.synthetic === true)
         .map((part) =>
           "text" in part && typeof part.text === "string" ? part.text : "",
         )
@@ -174,6 +170,8 @@ const EngramsPlugin: Plugin = async (input) => {
         .join("\n");
     };
 
+    type MessagePart = { type: string; text?: string; synthetic?: boolean };
+
     return {
       tool: tools,
       async "chat.message"(hookInput, output) {
@@ -185,9 +183,10 @@ const EngramsPlugin: Plugin = async (input) => {
           active.add(toolName);
         }
 
-        const userText = extractUserText(output.parts as any);
-        const agentText = extractAgentText(output.parts as any);
-        const allText = extractAllText(output.parts as any);
+        const parts = (output.parts ?? []) as MessagePart[];
+        const userText = extractUserText(parts);
+        const agentText = extractAgentText(parts);
+        const allText = extractAllText(parts);
 
         for (const matcher of matchableTriggers) {
           // Check any-msg triggers against all text
@@ -215,8 +214,8 @@ const EngramsPlugin: Plugin = async (input) => {
           }
         }
 
-        const message: any = output.message;
-        const toolsConfig = { ...(message.tools ?? {}) };
+        const message = output.message as { tools?: Record<string, boolean> };
+        const toolsConfig: Record<string, boolean> = { ...(message.tools ?? {}) };
 
         // Default to hidden for all Engram tools unless explicitly re-enabled below
         toolsConfig["engram_*"] = toolsConfig["engram_*"] ?? false;
@@ -231,7 +230,7 @@ const EngramsPlugin: Plugin = async (input) => {
           }
         }
 
-        message.tools = toolsConfig;
+        (output.message as { tools?: Record<string, boolean> }).tools = toolsConfig;
         sessionTriggers.set(sessionID, active);
       },
     };

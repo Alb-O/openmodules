@@ -109,12 +109,12 @@ export async function parseEngram(
     let promptContent = "";
     try {
       promptContent = await fs.readFile(promptPath, "utf8");
-    } catch (error: any) {
-      if (error?.code === "ENOENT") {
-        logWarning(`Missing prompt file: ${promptPath}`);
-      } else {
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT") {
         throw error;
       }
+      logWarning(`Missing prompt file: ${promptPath}`);
     }
 
     const triggers = parsed.data.triggers;
