@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { promises as fs } from "node:fs";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 
@@ -9,19 +9,19 @@ describe("generateFileTree", () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "engrams-plugin-"));
+    tempDir = await mkdtemp(path.join(os.tmpdir(), "engrams-plugin-"));
   });
 
   afterEach(async () => {
-    await fs.rm(tempDir, { recursive: true, force: true });
+    await rm(tempDir, { recursive: true, force: true });
   });
 
   it("generates flat list of absolute paths", async () => {
     const engramDir = path.join(tempDir, "tree-test");
-    await fs.mkdir(path.join(engramDir, "src"), { recursive: true });
-    await fs.writeFile(path.join(engramDir, "README.md"), "# Readme");
-    await fs.writeFile(path.join(engramDir, "src", "main.ts"), "export {}");
-    await fs.writeFile(path.join(engramDir, "src", "utils.ts"), "export {}");
+    await mkdir(path.join(engramDir, "src"), { recursive: true });
+    await Bun.write(path.join(engramDir, "README.md"), "# Readme");
+    await Bun.write(path.join(engramDir, "src", "main.ts"), "export {}");
+    await Bun.write(path.join(engramDir, "src", "utils.ts"), "export {}");
 
     const tree = await generateFileTree(engramDir);
 
@@ -34,11 +34,11 @@ describe("generateFileTree", () => {
 
   it("excludes node_modules by default", async () => {
     const engramDir = path.join(tempDir, "exclude-test");
-    await fs.mkdir(path.join(engramDir, "node_modules", "some-pkg"), {
+    await mkdir(path.join(engramDir, "node_modules", "some-pkg"), {
       recursive: true,
     });
-    await fs.mkdir(path.join(engramDir, "src"), { recursive: true });
-    await fs.writeFile(path.join(engramDir, "src", "index.ts"), "export {}");
+    await mkdir(path.join(engramDir, "src"), { recursive: true });
+    await Bun.write(path.join(engramDir, "src", "index.ts"), "export {}");
 
     const tree = await generateFileTree(engramDir);
 
@@ -48,10 +48,10 @@ describe("generateFileTree", () => {
 
   it("respects maxDepth option", async () => {
     const engramDir = path.join(tempDir, "depth-test");
-    await fs.mkdir(path.join(engramDir, "a", "b", "c", "d"), {
+    await mkdir(path.join(engramDir, "a", "b", "c", "d"), {
       recursive: true,
     });
-    await fs.writeFile(
+    await Bun.write(
       path.join(engramDir, "a", "b", "c", "d", "deep.ts"),
       "export {}",
     );
@@ -68,17 +68,17 @@ describe("generateFileTree", () => {
 
   it("respects .ignore file with gitignore syntax", async () => {
     const engramDir = path.join(tempDir, "ignore-test");
-    await fs.mkdir(path.join(engramDir, "src"), { recursive: true });
-    await fs.mkdir(path.join(engramDir, "secrets"), { recursive: true });
-    await fs.writeFile(path.join(engramDir, "README.md"), "# Readme");
-    await fs.writeFile(path.join(engramDir, "src", "index.ts"), "export {}");
-    await fs.writeFile(
+    await mkdir(path.join(engramDir, "src"), { recursive: true });
+    await mkdir(path.join(engramDir, "secrets"), { recursive: true });
+    await Bun.write(path.join(engramDir, "README.md"), "# Readme");
+    await Bun.write(path.join(engramDir, "src", "index.ts"), "export {}");
+    await Bun.write(
       path.join(engramDir, "secrets", "api-key.txt"),
       "secret",
     );
-    await fs.writeFile(path.join(engramDir, "debug.log"), "logs");
+    await Bun.write(path.join(engramDir, "debug.log"), "logs");
     // Create .ignore file
-    await fs.writeFile(path.join(engramDir, ".ignore"), "secrets/\n*.log\n");
+    await Bun.write(path.join(engramDir, ".ignore"), "secrets/\n*.log\n");
 
     const tree = await generateFileTree(engramDir);
 
@@ -91,14 +91,14 @@ describe("generateFileTree", () => {
 
   it("supports negation patterns in .ignore file", async () => {
     const engramDir = path.join(tempDir, "ignore-negation-test");
-    await fs.mkdir(path.join(engramDir, "logs"), { recursive: true });
-    await fs.writeFile(path.join(engramDir, "logs", "debug.log"), "debug");
-    await fs.writeFile(
+    await mkdir(path.join(engramDir, "logs"), { recursive: true });
+    await Bun.write(path.join(engramDir, "logs", "debug.log"), "debug");
+    await Bun.write(
       path.join(engramDir, "logs", "important.log"),
       "important",
     );
     // Ignore all logs except important.log
-    await fs.writeFile(
+    await Bun.write(
       path.join(engramDir, ".ignore"),
       "logs/*.log\n!logs/important.log\n",
     );
@@ -111,8 +111,8 @@ describe("generateFileTree", () => {
 
   it("works without .ignore file", async () => {
     const engramDir = path.join(tempDir, "no-ignore-test");
-    await fs.mkdir(path.join(engramDir, "src"), { recursive: true });
-    await fs.writeFile(path.join(engramDir, "src", "index.ts"), "export {}");
+    await mkdir(path.join(engramDir, "src"), { recursive: true });
+    await Bun.write(path.join(engramDir, "src", "index.ts"), "export {}");
 
     const tree = await generateFileTree(engramDir);
 
@@ -122,8 +122,8 @@ describe("generateFileTree", () => {
   describe("metadata", () => {
     it("includes inline metadata comments when includeMetadata is true", async () => {
       const engramDir = path.join(tempDir, "metadata-test");
-      await fs.mkdir(engramDir, { recursive: true });
-      await fs.writeFile(
+      await mkdir(engramDir, { recursive: true });
+      await Bun.write(
         path.join(engramDir, "backup.sh"),
         `#!/bin/bash
 # oneliner: Database backup utilities
@@ -131,7 +131,7 @@ describe("generateFileTree", () => {
 echo "Backing up..."
 `,
       );
-      await fs.writeFile(
+      await Bun.write(
         path.join(engramDir, "process.py"),
         `#!/usr/bin/env python3
 # oneliner: Data processing module
@@ -150,8 +150,8 @@ import sys
 
     it("does not include metadata when includeMetadata is false", async () => {
       const engramDir = path.join(tempDir, "no-metadata-test");
-      await fs.mkdir(engramDir, { recursive: true });
-      await fs.writeFile(
+      await mkdir(engramDir, { recursive: true });
+      await Bun.write(
         path.join(engramDir, "script.sh"),
         `#!/bin/bash
 # oneliner: My Script
@@ -169,15 +169,15 @@ echo "Hello"
 
     it("handles files without metadata gracefully", async () => {
       const engramDir = path.join(tempDir, "mixed-metadata-test");
-      await fs.mkdir(engramDir, { recursive: true });
-      await fs.writeFile(
+      await mkdir(engramDir, { recursive: true });
+      await Bun.write(
         path.join(engramDir, "with-meta.sh"),
         `#!/bin/bash
 # oneliner: Has Metadata
 echo "hi"
 `,
       );
-      await fs.writeFile(path.join(engramDir, "no-meta.txt"), "Just text");
+      await Bun.write(path.join(engramDir, "no-meta.txt"), "Just text");
 
       const tree = await generateFileTree(engramDir, { includeMetadata: true });
 
@@ -189,12 +189,12 @@ echo "hi"
     it("includes directory description from .oneliner file", async () => {
       const engramDir = path.join(tempDir, "dir-oneliner-test");
       const subDir = path.join(engramDir, "utils");
-      await fs.mkdir(subDir, { recursive: true });
-      await fs.writeFile(
+      await mkdir(subDir, { recursive: true });
+      await Bun.write(
         path.join(subDir, ".oneliner"),
         "Utility functions for data processing",
       );
-      await fs.writeFile(
+      await Bun.write(
         path.join(subDir, "helper.sh"),
         "#!/bin/bash\necho hi",
       );
@@ -208,12 +208,12 @@ echo "hi"
     it("includes directory description from .oneliner.txt file", async () => {
       const engramDir = path.join(tempDir, "dir-oneliner-txt-test");
       const subDir = path.join(engramDir, "scripts");
-      await fs.mkdir(subDir, { recursive: true });
-      await fs.writeFile(
+      await mkdir(subDir, { recursive: true });
+      await Bun.write(
         path.join(subDir, ".oneliner.txt"),
         "Shell scripts for automation",
       );
-      await fs.writeFile(path.join(subDir, "run.sh"), "#!/bin/bash\necho run");
+      await Bun.write(path.join(subDir, "run.sh"), "#!/bin/bash\necho run");
 
       const tree = await generateFileTree(engramDir, { includeMetadata: true });
 
@@ -224,9 +224,9 @@ echo "hi"
     it("prefers .oneliner over .oneliner.txt", async () => {
       const engramDir = path.join(tempDir, "dir-oneliner-priority-test");
       const subDir = path.join(engramDir, "lib");
-      await fs.mkdir(subDir, { recursive: true });
-      await fs.writeFile(path.join(subDir, ".oneliner"), "From .oneliner");
-      await fs.writeFile(
+      await mkdir(subDir, { recursive: true });
+      await Bun.write(path.join(subDir, ".oneliner"), "From .oneliner");
+      await Bun.write(
         path.join(subDir, ".oneliner.txt"),
         "From .oneliner.txt",
       );
@@ -239,13 +239,13 @@ echo "hi"
 
     it("hides .oneliner files from output", async () => {
       const engramDir = path.join(tempDir, "hide-oneliner-test");
-      await fs.mkdir(engramDir, { recursive: true });
-      await fs.writeFile(path.join(engramDir, ".oneliner"), "Description");
-      await fs.writeFile(
+      await mkdir(engramDir, { recursive: true });
+      await Bun.write(path.join(engramDir, ".oneliner"), "Description");
+      await Bun.write(
         path.join(engramDir, ".oneliner.txt"),
         "Description txt",
       );
-      await fs.writeFile(path.join(engramDir, "script.sh"), "#!/bin/bash");
+      await Bun.write(path.join(engramDir, "script.sh"), "#!/bin/bash");
 
       const tree = await generateFileTree(engramDir, { includeMetadata: true });
 
@@ -255,9 +255,9 @@ echo "hi"
 
     it("uses manifest oneliners for files", async () => {
       const engramDir = path.join(tempDir, "manifest-file-oneliner-test");
-      await fs.mkdir(engramDir, { recursive: true });
-      await fs.writeFile(path.join(engramDir, "api.ts"), "export {}");
-      await fs.writeFile(path.join(engramDir, "utils.ts"), "export {}");
+      await mkdir(engramDir, { recursive: true });
+      await Bun.write(path.join(engramDir, "api.ts"), "export {}");
+      await Bun.write(path.join(engramDir, "utils.ts"), "export {}");
 
       const tree = await generateFileTree(engramDir, {
         includeMetadata: true,
@@ -274,8 +274,8 @@ echo "hi"
     it("uses manifest oneliners for directories (with trailing slash)", async () => {
       const engramDir = path.join(tempDir, "manifest-dir-oneliner-test");
       const subDir = path.join(engramDir, "docs");
-      await fs.mkdir(subDir, { recursive: true });
-      await fs.writeFile(path.join(subDir, "guide.md"), "# Guide");
+      await mkdir(subDir, { recursive: true });
+      await Bun.write(path.join(subDir, "guide.md"), "# Guide");
 
       const tree = await generateFileTree(engramDir, {
         includeMetadata: true,
@@ -290,9 +290,9 @@ echo "hi"
 
     it("manifest oneliners take precedence over file-based oneliners", async () => {
       const engramDir = path.join(tempDir, "manifest-priority-test");
-      await fs.mkdir(engramDir, { recursive: true });
+      await mkdir(engramDir, { recursive: true });
       // File has an inline oneliner comment
-      await fs.writeFile(
+      await Bun.write(
         path.join(engramDir, "script.sh"),
         `#!/bin/bash
 # oneliner: From file comment
@@ -314,9 +314,9 @@ echo "hello"
     it("manifest oneliners take precedence over .oneliner files for directories", async () => {
       const engramDir = path.join(tempDir, "manifest-dir-priority-test");
       const subDir = path.join(engramDir, "lib");
-      await fs.mkdir(subDir, { recursive: true });
-      await fs.writeFile(path.join(subDir, ".oneliner"), "From .oneliner file");
-      await fs.writeFile(path.join(subDir, "index.ts"), "export {}");
+      await mkdir(subDir, { recursive: true });
+      await Bun.write(path.join(subDir, ".oneliner"), "From .oneliner file");
+      await Bun.write(path.join(subDir, "index.ts"), "export {}");
 
       const tree = await generateFileTree(engramDir, {
         includeMetadata: true,
@@ -331,8 +331,8 @@ echo "hello"
 
     it("truncates long manifest oneliners", async () => {
       const engramDir = path.join(tempDir, "manifest-truncate-test");
-      await fs.mkdir(engramDir, { recursive: true });
-      await fs.writeFile(path.join(engramDir, "long.ts"), "export {}");
+      await mkdir(engramDir, { recursive: true });
+      await Bun.write(path.join(engramDir, "long.ts"), "export {}");
 
       const longDescription =
         "This is a very long description that exceeds eighty characters and should be truncated with ellipsis";
@@ -349,12 +349,12 @@ echo "hello"
 
     it("falls back to file-based oneliners when no manifest entry exists", async () => {
       const engramDir = path.join(tempDir, "manifest-fallback-test");
-      await fs.mkdir(engramDir, { recursive: true });
-      await fs.writeFile(
+      await mkdir(engramDir, { recursive: true });
+      await Bun.write(
         path.join(engramDir, "with-manifest.ts"),
         "// oneliner: Should be ignored\nexport {}",
       );
-      await fs.writeFile(
+      await Bun.write(
         path.join(engramDir, "without-manifest.ts"),
         "// oneliner: From file\nexport {}",
       );
@@ -374,8 +374,8 @@ echo "hello"
     it("supports nested paths in manifest oneliners", async () => {
       const engramDir = path.join(tempDir, "manifest-nested-test");
       const nestedDir = path.join(engramDir, "content", "docs");
-      await fs.mkdir(nestedDir, { recursive: true });
-      await fs.writeFile(path.join(nestedDir, "api.md"), "# API");
+      await mkdir(nestedDir, { recursive: true });
+      await Bun.write(path.join(nestedDir, "api.md"), "# API");
 
       const tree = await generateFileTree(engramDir, {
         includeMetadata: true,

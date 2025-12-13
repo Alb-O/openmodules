@@ -1,5 +1,4 @@
 import { command, positional, flag } from "cmd-ts";
-import { execSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import pc from "picocolors";
@@ -46,11 +45,19 @@ export const remove = command({
       try {
         const relativePath = path.relative(projectRoot, targetDir);
         // git config --file .gitmodules --get-regexp returns entries for submodule paths
-        const result = execSync(
-          `git config --file .gitmodules --get-regexp "submodule\\..*\\.path" | grep -E "\\s${relativePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$"`,
-          { cwd: projectRoot, stdio: "pipe", encoding: "utf-8" },
+        const configResult = Bun.spawnSync(
+          ["git", "config", "--file", ".gitmodules", "--get-regexp", "submodule\\..*\\.path"],
+          { cwd: projectRoot },
         );
-        isSubmodule = result.trim().length > 0;
+        if (configResult.success) {
+          const output = configResult.stdout.toString();
+          // Check if relativePath appears as a value in the output
+          const escapedPath = relativePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const regex = new RegExp(`\\s${escapedPath}$`, "m");
+          isSubmodule = regex.test(output);
+        } else {
+          isSubmodule = false;
+        }
       } catch {
         // Command failed - not a submodule or no .gitmodules
         isSubmodule = false;
@@ -89,14 +96,20 @@ export const remove = command({
     try {
       if (isSubmodule && projectRoot) {
         const relativePath = path.relative(projectRoot, targetDir);
-        execSync(`git submodule deinit -f ${relativePath}`, {
-          cwd: projectRoot,
-          stdio: "inherit",
-        });
-        execSync(`git rm -f ${relativePath}`, {
-          cwd: projectRoot,
-          stdio: "inherit",
-        });
+        const deinitResult = Bun.spawnSync(
+          ["git", "submodule", "deinit", "-f", relativePath],
+          { cwd: projectRoot, stdout: "inherit", stderr: "inherit" },
+        );
+        if (!deinitResult.success) {
+          throw new Error(`git submodule deinit failed`);
+        }
+        const rmResult = Bun.spawnSync(
+          ["git", "rm", "-f", relativePath],
+          { cwd: projectRoot, stdout: "inherit", stderr: "inherit" },
+        );
+        if (!rmResult.success) {
+          throw new Error(`git rm failed`);
+        }
         // Clean up .git/modules
         const gitModulesPath = path.join(
           projectRoot,

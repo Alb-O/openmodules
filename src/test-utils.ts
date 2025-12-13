@@ -1,4 +1,4 @@
-import { promises as fs } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 /**
@@ -31,12 +31,12 @@ export async function createEngram(
   description = "This is a sufficiently long description for testing.",
   promptContent = "Body of the engram.",
 ): Promise<string> {
-  await fs.mkdir(engramDir, { recursive: true });
-  await fs.writeFile(
+  await mkdir(engramDir, { recursive: true });
+  await Bun.write(
     path.join(engramDir, "engram.toml"),
     engramManifest(name, description),
   );
-  await fs.writeFile(
+  await Bun.write(
     path.join(engramDir, "README.md"),
     engramPrompt(promptContent),
   );

@@ -3,10 +3,11 @@ valid:
   - "const result = Bun.spawnSync(['git', 'status'])"
   - "const proc = Bun.spawn(['npm', 'install'])"
   - "const result = Bun.spawnSync(['ls', '-la'], { cwd: '/tmp' })"
+  # spawn/exec without Sync suffix are async - could be from Bun or other sources
+  - "const child = spawn('node', ['script.js'])"
+  - "exec('ls -la', (err, stdout) => {})"
 invalid:
   - "const result = spawnSync('git', ['status'])"
   - "const result = spawnSync('git', ['status'], { encoding: 'utf-8' })"
   - "execSync('npm install')"
   - "execSync('git status', { cwd: projectRoot })"
-  - "const child = spawn('node', ['script.js'])"
-  - "exec('ls -la', (err, stdout) => {})"

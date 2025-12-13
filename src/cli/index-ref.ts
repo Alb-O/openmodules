@@ -7,7 +7,6 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from "fs";
-import { spawnSync } from "child_process";
 import * as path from "path";
 import TOML from "@iarna/toml";
 
@@ -50,42 +49,35 @@ const INDEX_REF = "refs/engrams/index";
  * Run a git command and return stdout, or null if it fails.
  */
 function git(args: string[], cwd: string, input?: string): string | null {
-  const result = spawnSync("git", args, {
+  const result = Bun.spawnSync(["git", ...args], {
     cwd,
-    encoding: "utf-8",
-    stdio: ["pipe", "pipe", "pipe"],
-    input,
+    stdin: input ? Buffer.from(input) : undefined,
   });
-  if (result.status !== 0) return null;
-  return (result.stdout as string).trim();
+  if (!result.success) return null;
+  return result.stdout.toString().trim();
 }
 
 /**
  * Run a git command and return success/failure.
  */
 function gitOk(args: string[], cwd: string): boolean {
-  const result = spawnSync("git", args, {
-    cwd,
-    stdio: ["pipe", "pipe", "pipe"],
-  });
-  return result.status === 0;
+  const result = Bun.spawnSync(["git", ...args], { cwd });
+  return result.success;
 }
 
 /**
  * Run a git command, throwing on failure.
  */
 function gitExec(args: string[], cwd: string, input?: string): string {
-  const result = spawnSync("git", args, {
+  const result = Bun.spawnSync(["git", ...args], {
     cwd,
-    encoding: "utf-8",
-    stdio: ["pipe", "pipe", "pipe"],
-    input,
+    stdin: input ? Buffer.from(input) : undefined,
   });
-  if (result.status !== 0) {
-    const stderr = (result.stderr as string) || "";
+  if (!result.success) {
+    const stderr = result.stderr.toString();
     throw new Error(`git ${args[0]} failed: ${stderr}`);
   }
-  return (result.stdout as string).trim();
+  return result.stdout.toString().trim();
 }
 
 /**
@@ -311,11 +303,12 @@ export function buildIndexFromEngrams(repoPath: string): EngramIndex {
  * Uses force push since the ref points to a blob, not a commit
  */
 export function pushIndex(repoPath: string, remote: string = "origin"): void {
-  const result = spawnSync("git", ["push", remote, `+${INDEX_REF}:${INDEX_REF}`], {
+  const result = Bun.spawnSync(["git", "push", remote, `+${INDEX_REF}:${INDEX_REF}`], {
     cwd: repoPath,
-    stdio: "inherit",
+    stdout: "inherit",
+    stderr: "inherit",
   });
-  if (result.status !== 0) {
+  if (!result.success) {
     throw new Error("Failed to push index ref");
   }
 }

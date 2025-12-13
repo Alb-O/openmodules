@@ -1,5 +1,4 @@
 import { command, positional, flag, option, string, optional } from "cmd-ts";
-import { execSync, spawnSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import pc from "picocolors";
@@ -106,14 +105,12 @@ async function handleAdd({ parsed, engramName, projectRoot, targetDir, isGlobal,
   if (force && !isGlobal && projectRoot) {
     const relativePath = path.relative(projectRoot, targetDir);
     // Deinit submodule - may not be initialized, that's ok
-    spawnSync("git", ["submodule", "deinit", "-f", relativePath], {
+    Bun.spawnSync(["git", "submodule", "deinit", "-f", relativePath], {
       cwd: projectRoot,
-      stdio: "pipe",
     });
     // Remove from index - may not be in index, that's ok
-    spawnSync("git", ["rm", "-f", relativePath], {
+    Bun.spawnSync(["git", "rm", "-f", relativePath], {
       cwd: projectRoot,
-      stdio: "pipe",
     });
     // Find the actual git dir (handles nested submodules)
     const dotGitPath = path.join(projectRoot, ".git");
@@ -194,11 +191,13 @@ function addAsSubmodule(
 ) {
   const relativePath = path.relative(projectRoot, targetDir);
   if (noCache) {
-    const forceFlag = force ? "--force " : "";
-    execSync(
-      `git submodule add ${forceFlag}${parsed.url} ${relativePath}`,
-      { cwd: projectRoot, stdio: "inherit" },
-    );
+    const args = ["git", "submodule", "add"];
+    if (force) args.push("--force");
+    args.push(parsed.url, relativePath);
+    const result = Bun.spawnSync(args, { cwd: projectRoot, stdout: "inherit", stderr: "inherit" });
+    if (!result.success) {
+      throw new Error("git submodule add failed");
+    }
   } else {
     submoduleAddFromCache(parsed.url, relativePath, projectRoot, { force });
   }
@@ -208,7 +207,10 @@ function addAsSubmodule(
 
 function cloneDirect(url: string, targetDir: string, noCache: boolean) {
   if (noCache) {
-    execSync(`git clone ${url} ${targetDir}`, { stdio: "inherit" });
+    const result = Bun.spawnSync(["git", "clone", url, targetDir], { stdout: "inherit", stderr: "inherit" });
+    if (!result.success) {
+      throw new Error("git clone failed");
+    }
   } else {
     cloneFromCache(url, targetDir);
   }

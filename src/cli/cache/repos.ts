@@ -42,7 +42,7 @@ function gitExec(
     stderr: quiet ? "pipe" : "inherit",
   });
   if (!result.success) {
-    const errorMsg = result.stderr.toString().trim() || "Unknown error";
+    const errorMsg = result.stderr?.toString().trim() || "Unknown error";
     throw new Error(`git ${args[0]} failed:\n  ${errorMsg}`);
   }
 }
@@ -103,7 +103,7 @@ export function ensureCached(
     });
     if (!result.success) {
       // Fetch failed - warn but continue with stale cache
-      const errorMsg = result.stderr.toString().trim() || "Unknown error";
+      const errorMsg = result.stderr?.toString().trim() || "Unknown error";
       console.warn(pc.yellow(`Warning: Failed to update cache for ${url}`));
       console.warn(pc.dim(`  ${errorMsg}`));
       console.warn(pc.dim("  Using potentially stale cached version"));
@@ -119,7 +119,7 @@ export function ensureCached(
       stderr: quiet ? "pipe" : "inherit",
     });
     if (!result.success) {
-      const errorMsg = result.stderr.toString().trim() || "Unknown error";
+      const errorMsg = result.stderr?.toString().trim() || "Unknown error";
       throw new Error(`Failed to clone ${url} into cache:\n  ${errorMsg}`);
     }
   }

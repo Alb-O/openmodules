@@ -4,21 +4,18 @@
  */
 import { describe, it, expect } from "bun:test";
 import { spawn } from "bun";
-import { promises as fs } from "node:fs";
+import { mkdir, mkdtemp, rm, access, copyFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
 
 const OPENCODE_MODEL = "opencode/big-pickle";
 const TEST_TIMEOUT = 120_000;
-const execAsync = promisify(exec);
 
 const runAgentSmoke = process.env.RUN_AGENT_SMOKE === "true";
 
 async function pathExists(filePath: string): Promise<boolean> {
   try {
-    await fs.access(filePath);
+    await access(filePath);
     return true;
   } catch {
     return false;
@@ -27,8 +24,8 @@ async function pathExists(filePath: string): Promise<boolean> {
 
 let hasOpencode = false;
 try {
-  await execAsync("which opencode");
-  hasOpencode = true;
+  const result = Bun.spawnSync(["which", "opencode"]);
+  hasOpencode = result.success;
 } catch {
   hasOpencode = false;
 }
@@ -48,7 +45,7 @@ async function createEngram(
   readme: string,
 ) {
   const engramDir = path.join(root, slug);
-  await fs.mkdir(engramDir, { recursive: true });
+  await mkdir(engramDir, { recursive: true });
 
   const manifestLines = [
     `name = "${name}"`,
@@ -66,15 +63,15 @@ async function createEngram(
 
   manifestLines.push("");
 
-  await fs.writeFile(
+  await Bun.write(
     path.join(engramDir, "engram.toml"),
     manifestLines.join("\n"),
   );
-  await fs.writeFile(path.join(engramDir, "README.md"), readme);
+  await Bun.write(path.join(engramDir, "README.md"), readme);
 }
 
 async function setupTestDir(): Promise<TestContext> {
-  const testDir = await fs.mkdtemp(
+  const testDir = await mkdtemp(
     path.join(os.tmpdir(), "engrams-smoke-"),
   );
   const opencodeDir = path.join(testDir, ".opencode");
@@ -83,19 +80,22 @@ async function setupTestDir(): Promise<TestContext> {
   const pluginBundle = path.join(repoRoot, "dist", "engrams.bundle.js");
   const pluginPath = path.join(pluginDir, "engrams.min.js");
 
-  await fs.mkdir(pluginDir, { recursive: true });
+  await mkdir(pluginDir, { recursive: true });
 
   // Ensure a fresh bundle exists
   if (!(await pathExists(pluginBundle))) {
-    await execAsync("bun run build", { cwd: repoRoot });
+    const buildResult = Bun.spawnSync(["bun", "run", "build"], { cwd: repoRoot });
+    if (!buildResult.success) {
+      throw new Error("Failed to build plugin bundle");
+    }
   }
 
   // Copy the bundle into the temp .opencode plugin directory
-  await fs.copyFile(pluginBundle, pluginPath);
+  await copyFile(pluginBundle, pluginPath);
 
   // Minimal opencode config
-  await fs.mkdir(opencodeDir, { recursive: true });
-  await fs.writeFile(
+  await mkdir(opencodeDir, { recursive: true });
+  await Bun.write(
     path.join(opencodeDir, "opencode.json"),
     '{"$schema":"https://opencode.ai/config.json"}\n',
   );
@@ -135,7 +135,7 @@ async function setupTestDir(): Promise<TestContext> {
 }
 
 async function cleanup(ctx: TestContext) {
-  await fs.rm(ctx.testDir, { recursive: true, force: true });
+  await rm(ctx.testDir, { recursive: true, force: true });
 }
 
 async function runOpencode(

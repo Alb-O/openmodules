@@ -47,7 +47,8 @@ async function parseEngram(
     try {
       promptContent = fs.readFileSync(promptPath, "utf-8");
     } catch {
-      // Missing prompt file is OK
+      // Missing prompt file is OK - use empty string
+      promptContent = "";
     }
 
     return {

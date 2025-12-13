@@ -21,7 +21,6 @@ note: |
     await proc.exited;
 rule:
   any:
+    # Match spawnSync/execSync calls (sync variants are distinctive to child_process)
     - pattern: spawnSync($$$)
     - pattern: execSync($$$)
-    - pattern: spawn($$$)
-    - pattern: exec($$$)
