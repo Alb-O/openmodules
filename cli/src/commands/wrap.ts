@@ -385,14 +385,8 @@ export const wrap = command({
     if (lazy) {
       const gitignorePath = path.join(targetDir, ".gitignore");
       const gitignoreContent = [
-        "# Ignore cloned content, keep manifest files",
-        "*",
-        "!.gitignore",
-        "!.ignore",
-        "!engram.toml",
-        "!README.md",
-        "!.oneliner",
-        "!.oneliner.txt",
+        "# Cloned repo content (run 'engram lazy-init' to populate)",
+        `/${CONTENT_DIR}/`,
         "",
       ].join("\n");
       fs.writeFileSync(gitignorePath, gitignoreContent);
