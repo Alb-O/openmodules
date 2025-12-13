@@ -147,7 +147,7 @@ const path_cmd = command({
   description: "Show cache directory path",
   args: {},
   handler: async () => {
-    console.log(getCacheDir());
+    log(getCacheDir());
   },
 });
 

@@ -20,6 +20,8 @@
           pkgs.ast-grep
           pkgs.bun
           pkgs.nodejs
+          pkgs.typescript
+          pkgs.typescript-language-server
           inputs.bun2nix.packages.${pkgs.system}.default
           self'.formatter
         ];

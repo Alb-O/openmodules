@@ -1,0 +1,24 @@
+id: prefer-consola-in-cli
+
+valid:
+  - |
+    import { info, success, fail } from "../../logging";
+    success("Operation completed");
+  - |
+    import { log } from "../../logging";
+    log("Plain message");
+  - |
+    import { warn } from "../../logging";
+    warn("Warning message");
+
+invalid:
+  - |
+    console.log("Hello");
+  - |
+    console.log(pc.green("Success"));
+  - |
+    console.error(pc.red("Error"));
+  - |
+    console.warn("Warning");
+  - |
+    console.info("Info");

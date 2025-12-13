@@ -234,7 +234,7 @@ export const showIndex = command({
     }
 
     if (json) {
-      console.log(JSON.stringify(index, null, 2));
+      log(JSON.stringify(index, null, 2));
       return;
     }
 

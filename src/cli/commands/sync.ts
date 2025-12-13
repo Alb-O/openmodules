@@ -1,5 +1,5 @@
 import { command, flag } from "cmd-ts";
-import { info, success, warn, fail } from "../../logging";
+import { info, success, warn, fail, log } from "../../logging";
 import { findProjectRoot } from "../utils";
 import {
   buildIndexFromEngrams,
@@ -61,7 +61,7 @@ export const sync = command({
 
     if (dryRun) {
       warn("[dry-run] Would write index:");
-      console.log(JSON.stringify(index, null, 2));
+      log(JSON.stringify(index, null, 2));
       return;
     }
 

@@ -1,0 +1,25 @@
+id: prefer-consola-in-cli
+language: typescript
+severity: warning
+message: "Use consola logger instead of console.* in CLI code."
+note: |
+  CLI code should use the consola-based logger from src/logging.ts.
+  
+  Instead of:
+    console.log(pc.green("Success!"));
+    console.error(pc.red("Error!"));
+  
+  Use:
+    import { success, fail, info, warn, log } from "../../logging";
+    success("Success!");
+    fail("Error!");
+files:
+  - src/cli/**/*.ts
+ignores:
+  - src/cli/cache/plugins.ts
+rule:
+  any:
+    - pattern: console.log($$$ARGS)
+    - pattern: console.warn($$$ARGS)
+    - pattern: console.error($$$ARGS)
+    - pattern: console.info($$$ARGS)

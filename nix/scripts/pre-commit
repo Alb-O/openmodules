@@ -29,6 +29,18 @@ done
 
 echo "Formatting complete."
 
+# Run TypeScript type checking
+if command -v tsc &> /dev/null; then
+    echo "Running TypeScript type check..."
+    if ! tsc --noEmit; then
+        echo "TypeScript type check failed. Please fix errors before committing."
+        exit 1
+    fi
+    echo "TypeScript type check passed."
+else
+    echo "Warning: tsc not found, skipping type check."
+fi
+
 # Run ast-grep lint scan
 if command -v ast-grep &> /dev/null; then
     echo "Running ast-grep scan..."

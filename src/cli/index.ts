@@ -9,6 +9,7 @@ import { sync } from "./commands/sync";
 import { lazyInit, showIndex } from "./commands/lazy";
 import { wrap } from "./commands/wrap";
 import { preview } from "./commands/preview";
+import { error } from "../logging";
 
 // cmd-ts calls process.exit(1) for --help, override to exit 0
 const isHelp = process.argv.includes("--help") || process.argv.includes("-h");
@@ -38,6 +39,6 @@ const app = subcommands({
 });
 
 run(app, process.argv.slice(2)).catch((e) => {
-  console.error(e);
+  error(e);
   process.exit(1);
 });
