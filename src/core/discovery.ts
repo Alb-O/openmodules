@@ -7,6 +7,14 @@ import { MANIFEST_FILENAME, parseEngram, generateToolName } from "./manifest";
 import { INDEX_REF, ENGRAMS_DIR } from "../constants";
 
 /**
+ * Check if two manifest paths are in the same directory (true duplicate vs collision).
+ * Same directory = exact duplicate; different directory = path collision.
+ */
+function isSameDirectory(path1: string, path2: string): boolean {
+  return dirname(path1) === dirname(path2);
+}
+
+/**
  * Run a git command and return stdout, or null if it fails.
  */
 function git(args: string[], cwd: string): string | null {
@@ -203,7 +211,7 @@ export async function discoverEngrams(basePaths: unknown): Promise<Engram[]> {
   }
 
   const toolNames = new Map<string, string>(); // toolName -> manifestPath
-  const duplicates: { toolName: string; paths: string[] }[] = [];
+  const duplicates: { toolName: string; paths: string[]; isCollision?: boolean }[] = [];
 
   for (const engram of engrams) {
     const existing = toolNames.get(engram.toolName);
@@ -212,9 +220,11 @@ export async function discoverEngrams(basePaths: unknown): Promise<Engram[]> {
       if (dup) {
         dup.paths.push(engram.manifestPath);
       } else {
+        const isCollision = !isSameDirectory(existing, engram.manifestPath);
         duplicates.push({
           toolName: engram.toolName,
           paths: [existing, engram.manifestPath],
+          isCollision,
         });
       }
     }
@@ -222,17 +232,35 @@ export async function discoverEngrams(basePaths: unknown): Promise<Engram[]> {
   }
 
   if (duplicates.length > 0) {
-    const details = duplicates
-      .map(
-        (d) =>
-          `  ${d.toolName}:\n${d.paths.map((p) => `    - ${p}`).join("\n")}`,
-      )
-      .join("\n");
-    warn(
-      `Duplicate tool names detected. Keeping first occurrence of each:\n${details}\n\n` +
-        `To fix: rename one of the conflicting engrams, or remove the duplicate.\n` +
-        `Each engram directory name must be unique across local and global paths.`,
-    );
+    const collisions = duplicates.filter((d) => d.isCollision);
+    const exactDups = duplicates.filter((d) => !d.isCollision);
+
+    if (collisions.length > 0) {
+      const details = collisions
+        .map(
+          (d) =>
+            `  ${d.toolName}:\n${d.paths.map((p) => `    - ${p}`).join("\n")}`,
+        )
+        .join("\n");
+      warn(
+        `Tool name collisions detected (different paths generate same name):\n${details}\n\n` +
+          `This happens when paths differ only by hyphens vs nesting (e.g., foo-bar vs foo/bar).\n` +
+          `To fix: rename one of the conflicting directories.`,
+      );
+    }
+
+    if (exactDups.length > 0) {
+      const details = exactDups
+        .map(
+          (d) =>
+            `  ${d.toolName}:\n${d.paths.map((p) => `    - ${p}`).join("\n")}`,
+        )
+        .join("\n");
+      warn(
+        `Duplicate engrams detected. Keeping first occurrence of each:\n${details}\n\n` +
+          `To fix: remove the duplicate engram from one location.`,
+      );
+    }
 
     const duplicateToolNames = new Set(duplicates.map((d) => d.toolName));
     const seenToolNames = new Set<string>();

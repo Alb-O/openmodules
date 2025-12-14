@@ -9,6 +9,7 @@ import { sync } from "./commands/sync";
 import { lazyInit, showIndex } from "./commands/lazy";
 import { wrap } from "./commands/wrap";
 import { preview } from "./commands/preview";
+import { chain } from "./commands/chain";
 import { error } from "../logging";
 
 // cmd-ts calls process.exit(1) for --help, override to exit 0
@@ -30,6 +31,7 @@ const app = subcommands({
     wrap,
     list,
     preview,
+    chain,
     remove,
     cache,
     sync,

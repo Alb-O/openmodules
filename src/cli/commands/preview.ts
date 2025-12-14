@@ -1,4 +1,4 @@
-import { command, positional, string } from "cmd-ts";
+import { command, positional, string, flag } from "cmd-ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
@@ -35,6 +35,12 @@ interface EngramToml {
     sparse?: string[];
   };
   oneliners?: Record<string, string>;
+}
+
+function generateToolName(engramPath: string, baseDir: string): string {
+  const relativePath = path.relative(baseDir, engramPath);
+  const components = relativePath.split(path.sep).filter((part) => part !== ".");
+  return `engram_${components.join("_").replace(/-/g, "_")}`;
 }
 
 async function parseEngram(
@@ -99,6 +105,50 @@ function findEngram(
   return null;
 }
 
+function searchForToolName(dir: string, baseDir: string, targetToolName: string): string | null {
+  if (!fs.existsSync(dir)) return null;
+
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue;
+    if (!entry.isDirectory()) continue;
+
+    const entryPath = path.join(dir, entry.name);
+    const manifestPath = path.join(entryPath, MANIFEST_FILENAME);
+
+    if (fs.existsSync(manifestPath)) {
+      const toolName = generateToolName(entryPath, baseDir);
+      if (toolName === targetToolName) {
+        return entryPath;
+      }
+    }
+
+    const nested = searchForToolName(entryPath, baseDir, targetToolName);
+    if (nested) return nested;
+  }
+
+  return null;
+}
+
+function findEngramByToolName(
+  toolName: string,
+  projectRoot: string | null,
+): { path: string; manifestPath: string } | null {
+  const paths = getModulePaths(projectRoot || undefined);
+  const searchPaths = [paths.local, paths.global].filter(Boolean) as string[];
+
+  for (const baseDir of searchPaths) {
+    if (!fs.existsSync(baseDir)) continue;
+
+    const found = searchForToolName(baseDir, baseDir, toolName);
+    if (found) {
+      return { path: found, manifestPath: path.join(found, MANIFEST_FILENAME) };
+    }
+  }
+
+  return null;
+}
+
 export const preview = command({
   name: "preview",
   description: "Preview what the agent sees when an engram is activated",
@@ -106,12 +156,25 @@ export const preview = command({
     name: positional({
       type: string,
       displayName: "name",
-      description: "Name of the engram to preview",
+      description: "Name or tool name of the engram to preview",
+    }),
+    toolName: flag({
+      long: "tool-name",
+      short: "t",
+      description: "Interpret the argument as a tool name instead of a path",
     }),
   },
-  handler: async ({ name }) => {
+  handler: async ({ name, toolName: useToolName }) => {
     const projectRoot = findProjectRoot();
-    const found = findEngram(name, projectRoot);
+
+    let found: { path: string; manifestPath: string } | null = null;
+
+    if (useToolName || name.startsWith("engram_")) {
+      const searchName = name.startsWith("engram_") ? name : `engram_${name}`;
+      found = findEngramByToolName(searchName, projectRoot);
+    } else {
+      found = findEngram(name, projectRoot);
+    }
 
     if (!found) {
       fail(`Engram not found: ${name}\nRun 'engram list' to see available engrams`);

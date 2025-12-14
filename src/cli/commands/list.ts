@@ -279,6 +279,36 @@ function countEngrams(engrams: EngramInfo[]): number {
   return engrams.reduce((sum, e) => sum + 1 + countEngrams(e.children), 0);
 }
 
+function isPermanentlyVisible(eg: EngramInfo): boolean {
+  const disclosureCount = 
+    (eg.disclosureTriggers?.anyMsg?.length || 0) +
+    (eg.disclosureTriggers?.userMsg?.length || 0) +
+    (eg.disclosureTriggers?.agentMsg?.length || 0);
+  const activationCount = 
+    (eg.activationTriggers?.anyMsg?.length || 0) +
+    (eg.activationTriggers?.userMsg?.length || 0) +
+    (eg.activationTriggers?.agentMsg?.length || 0);
+  return disclosureCount === 0 && activationCount === 0;
+}
+
+function hasTriggers(eg: EngramInfo): boolean {
+  return !isPermanentlyVisible(eg);
+}
+
+function filterByTriggerStatus(engrams: EngramInfo[], wantTriggers: boolean): EngramInfo[] {
+  const result: EngramInfo[] = [];
+  for (const eg of engrams) {
+    const filteredChildren = filterByTriggerStatus(eg.children, wantTriggers);
+    const matches = wantTriggers ? hasTriggers(eg) : isPermanentlyVisible(eg);
+    if (matches) {
+      result.push({ ...eg, children: filteredChildren });
+    } else if (filteredChildren.length > 0) {
+      result.push(...filteredChildren);
+    }
+  }
+  return result;
+}
+
 function getUninitializedFromIndex(
   projectRoot: string,
   existingNames: Set<string>,
@@ -347,8 +377,18 @@ export const list = command({
       short: "f",
       description: "Show flat list without hierarchy",
     }),
+    disclosed: flag({
+      long: "disclosed",
+      short: "d",
+      description: "Show only engrams that require trigger-based disclosure",
+    }),
+    permanent: flag({
+      long: "permanent",
+      short: "p",
+      description: "Show only permanently visible engrams (no triggers)",
+    }),
   },
-  handler: async ({ global: globalOnly, local: localOnly, flat }) => {
+  handler: async ({ global: globalOnly, local: localOnly, flat, disclosed, permanent }) => {
     const projectRoot = findProjectRoot();
     const paths = getModulePaths(projectRoot || undefined);
 
@@ -369,13 +409,27 @@ export const list = command({
       }
     }
 
+    if (disclosed) {
+      globalEngrams = filterByTriggerStatus(globalEngrams, true);
+      localEngrams = filterByTriggerStatus(localEngrams, true);
+    } else if (permanent) {
+      globalEngrams = filterByTriggerStatus(globalEngrams, false);
+      localEngrams = filterByTriggerStatus(localEngrams, false);
+    }
+
     const totalGlobal = countEngrams(globalEngrams);
     const totalLocal = countEngrams(localEngrams);
 
     if (totalGlobal === 0 && totalLocal === 0) {
-      info("No engrams installed");
-      if (!projectRoot && !globalOnly) {
-        info("(Not in a project directory - showing global engrams only)");
+      if (disclosed) {
+        info("No trigger-based engrams found\nAll engrams are permanently visible");
+      } else if (permanent) {
+        info("No permanently visible engrams found\nAll engrams require trigger-based disclosure");
+      } else {
+        info("No engrams installed");
+        if (!projectRoot && !globalOnly) {
+          info("(Not in a project directory - showing global engrams only)");
+        }
       }
       return;
     }
