@@ -6,7 +6,7 @@ export type {
   TriggerConfig,
   CompiledTriggerRegexes,
 } from "./core";
-export { logWarning, logError } from "./logging";
+export { warn, error } from "./logging";
 export {
   expandBraces,
   compileContextTrigger,

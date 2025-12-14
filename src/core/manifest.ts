@@ -2,7 +2,7 @@ import * as TOML from "@iarna/toml";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { z } from "zod";
 import type { Engram, TriggerConfig } from "./types";
-import { logWarning, logError } from "../logging";
+import { warn, error } from "../logging";
 import {
   MANIFEST_FILENAME,
   DEFAULT_PROMPT_FILENAME,
@@ -73,19 +73,19 @@ type EngramManifest = z.infer<typeof EngramManifestSchema>;
 
 function logManifestErrors(
   manifestPath: string,
-  error: z.ZodError<EngramManifest>,
+  zodError: z.ZodError<EngramManifest>,
 ) {
-  logError(`Invalid manifest: ${manifestPath}`);
-  for (const issue of error.issues) {
+  error(`Invalid manifest: ${manifestPath}`);
+  for (const issue of zodError.issues) {
     const field = issue.path.length > 0 ? issue.path.join(".") : "(root)";
-    logError(`  ${field}: ${issue.message}`);
+    error(`  ${field}: ${issue.message}`);
   }
-  logError(`This engram will be skipped. Fix the manifest to enable it.`);
+  error(`This engram will be skipped. Fix the manifest to enable it.`);
 }
 
 export function generateToolName(engramPath: string, baseDir?: string): string {
   if (typeof engramPath !== "string" || engramPath.length === 0) {
-    logWarning(
+    warn(
       "Received invalid engram path while generating tool name; defaulting to engram_unknown.",
     );
     return "engram_unknown";
@@ -136,7 +136,7 @@ export async function parseEngram(
   baseDir: string,
 ): Promise<Engram | null> {
   if (typeof manifestPath !== "string" || manifestPath.length === 0) {
-    logWarning("Skipping engram with invalid path:", manifestPath);
+    warn("Skipping engram with invalid path:", manifestPath);
     return null;
   }
 
@@ -145,7 +145,7 @@ export async function parseEngram(
   try {
     const manifestFile = Bun.file(manifestPath);
     if (!(await manifestFile.exists())) {
-      logWarning("Manifest file not found:", manifestPath);
+      warn("Manifest file not found:", manifestPath);
       return null;
     }
     const manifestRaw = await manifestFile.text();
@@ -166,7 +166,7 @@ export async function parseEngram(
     if (await promptFile.exists()) {
       promptContent = await promptFile.text();
     } else {
-      logWarning(`Missing prompt file: ${promptPath}`);
+      warn(`Missing prompt file: ${promptPath}`);
     }
 
     const disclosureTriggers = parseTriggerConfig(
@@ -191,11 +191,11 @@ export async function parseEngram(
       content: promptContent.trim(),
       manifestPath,
     };
-  } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    logError(`Failed to parse engram: ${manifestPath}`);
-    logError(`  ${errMsg}`);
-    logError(`This engram will be skipped. Check the TOML syntax is valid.`);
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    error(`Failed to parse engram: ${manifestPath}`);
+    error(`  ${errMsg}`);
+    error(`This engram will be skipped. Check the TOML syntax is valid.`);
     return null;
   }
 }

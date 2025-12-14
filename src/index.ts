@@ -7,8 +7,8 @@ import {
   discoverEngramsWithLazy,
   generateFileTree,
   getDefaultEngramPaths,
-  logError,
-  logWarning,
+  error,
+  warn,
   type CompiledTriggerRegexes,
   type ContextTriggerMatcher,
   type Engram,
@@ -75,8 +75,8 @@ const EngramsPlugin: Plugin = async (input) => {
       getDefaultEngramPaths(input.directory),
       input.directory,
     );
-  } catch (error) {
-    logError("Failed to discover engrams, plugin will be disabled:", error);
+  } catch (err) {
+    error("Failed to discover engrams, plugin will be disabled:", err);
     return {};
   }
 
@@ -116,7 +116,7 @@ const EngramsPlugin: Plugin = async (input) => {
       if (!engram) {
         if (!warnedUnknownTools.has(toolName)) {
           warnedUnknownTools.add(toolName);
-          logWarning(`Unknown tool name in disclosed set: ${toolName}`);
+          warn(`Unknown tool name in disclosed set: ${toolName}`);
         }
         return false;
       }

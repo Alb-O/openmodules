@@ -2,7 +2,7 @@ import os from "node:os";
 import { promises as fs, existsSync, Dirent } from "node:fs";
 import { dirname, join, sep } from "node:path";
 import type { Engram } from "./types";
-import { logWarning } from "../logging";
+import { warn } from "../logging";
 import { MANIFEST_FILENAME, parseEngram, generateToolName } from "./manifest";
 import { INDEX_REF, ENGRAMS_DIR } from "../constants";
 
@@ -106,7 +106,7 @@ function normalizeBasePaths(basePaths: unknown): string[] {
     return [basePaths];
   }
 
-  logWarning(
+  warn(
     "Invalid basePaths provided to discoverEngrams; expected string[] or string.",
   );
   return [];
@@ -180,7 +180,7 @@ export async function discoverEngrams(basePaths: unknown): Promise<Engram[]> {
       if (code === "ENOENT") {
         continue;
       }
-      logWarning(
+      warn(
         `Unexpected error while scanning engrams in ${basePath}:`,
         error,
       );
@@ -188,7 +188,7 @@ export async function discoverEngrams(basePaths: unknown): Promise<Engram[]> {
   }
 
   if (!foundExistingDir) {
-    logWarning(
+    warn(
       "No engrams directories found. Checked:\n" +
         paths.map((path) => `  - ${path}`).join("\n"),
     );
@@ -220,7 +220,7 @@ export async function discoverEngrams(basePaths: unknown): Promise<Engram[]> {
           `  ${d.toolName}:\n${d.paths.map((p) => `    - ${p}`).join("\n")}`,
       )
       .join("\n");
-    logWarning(
+    warn(
       `Duplicate tool names detected. Keeping first occurrence of each:\n${details}\n\n` +
         `To fix: rename one of the conflicting engrams, or remove the duplicate.\n` +
         `Each engram directory name must be unique across local and global paths.`,
