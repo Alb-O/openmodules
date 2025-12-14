@@ -67,20 +67,26 @@ function matchesTriggers(
 }
 
 const EngramsPlugin: Plugin = async (input) => {
+  let engrams: Engram[];
+
   try {
-    const engrams = await discoverEngramsWithLazy(
+    engrams = await discoverEngramsWithLazy(
       getDefaultEngramPaths(input.directory),
-      input.directory, // Pass root dir for index reading
+      input.directory,
     );
+  } catch (error) {
+    logError("Failed to discover engrams, plugin will be disabled:", error);
+    return {};
+  }
 
-    if (engrams.length === 0) {
-      return {};
-    }
+  if (engrams.length === 0) {
+    return {};
+  }
 
-    const engramByToolName = new Map<string, Engram>();
-    for (const engram of engrams) {
-      engramByToolName.set(engram.toolName, engram);
-    }
+  const engramByToolName = new Map<string, Engram>();
+  for (const engram of engrams) {
+    engramByToolName.set(engram.toolName, engram);
+  }
 
     const triggerMatchers = buildContextTriggerMatchers(engrams);
     const alwaysVisibleTools = new Set(
@@ -300,10 +306,6 @@ const EngramsPlugin: Plugin = async (input) => {
         sessionActivated.set(sessionID, activated);
       },
     };
-  } catch (error) {
-    logError("Failed to initialize engrams plugin:", error);
-    throw error;
-  }
 };
 
 export default EngramsPlugin;
