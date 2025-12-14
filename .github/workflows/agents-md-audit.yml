@@ -1,0 +1,69 @@
+name: AGENTS.md Audit
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "lint/**"
+      - "AGENTS.md"
+  schedule:
+    - cron: "0 0 * * 0" # Weekly on Sunday at midnight
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run OpenCode Audit
+        uses: sst/opencode/github@latest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          model: opencode/big-pickle
+          prompt: |
+            Audit the AGENTS.md file against the current codebase. Your task is to verify that the documentation is accurate, up-to-date, and reflects the actual implementation.
+
+            IMPORTANT: Do NOT suggest adding new content to AGENTS.md. Only flag inaccuracies, outdated information, or claims that no longer match the code. The goal is verification, not expansion.
+
+            ## Verification Steps
+
+            1. **Read AGENTS.md** and extract every factual claim about the codebase (function names, file paths, behaviors, patterns, etc.)
+
+            2. **Verify each claim** by reading the referenced source files and confirming the described behavior exists and works as documented.
+
+            3. **Check for stale references** such as renamed functions, moved files, changed APIs, or removed features.
+
+            4. **Spot-check code style claims** by scanning a sample of source files for violations of any stated conventions.
+
+            ## Report Format
+
+            Create a GitHub comment with your findings:
+
+            ### AGENTS.md Audit Report
+
+            **Status**: [PASS | WARN | FAIL]
+
+            #### Verified Claims
+            - List claims that are accurate
+
+            #### Issues Found
+            - List any inaccuracies, outdated information, or false claims
+            - Include file paths and line numbers for reference
+
+            #### Corrections Needed
+            - Only list fixes for inaccurate or outdated claims
+            - Do NOT suggest adding new documentation or expanding coverage
+
+            If everything is accurate, report PASS with a brief confirmation.
+            If there are minor inaccuracies, report WARN.
+            If there are significant inaccuracies or false claims, report FAIL.
