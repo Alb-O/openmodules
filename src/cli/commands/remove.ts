@@ -1,6 +1,7 @@
 import { command, positional, flag } from "cmd-ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as readline from "node:readline";
 import { info, success, fail } from "../../logging";
 import { getModulePaths, findProjectRoot } from "../utils";
 
@@ -67,7 +68,6 @@ export const remove = command({
     }
 
     if (!force) {
-      const readline = require("readline");
       const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,

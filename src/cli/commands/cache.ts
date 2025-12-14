@@ -5,6 +5,7 @@ import {
   positional,
   string,
 } from "cmd-ts";
+import * as readline from "node:readline";
 import { info, success, warn, fail, log } from "../../logging";
 import {
   getCacheDir,
@@ -65,7 +66,6 @@ const clear = command({
     const totalSize = cached.reduce((sum, r) => sum + r.size, 0);
 
     if (!force) {
-      const readline = require("readline");
       const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
