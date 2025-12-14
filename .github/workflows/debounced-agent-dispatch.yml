@@ -1,0 +1,94 @@
+name: Debounced Agent Dispatch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "lint/**"
+      - "AGENTS.md"
+  workflow_dispatch: # Manual trigger for testing
+
+concurrency:
+  group: debounced-agent-dispatch
+  cancel-in-progress: true
+
+jobs:
+  debounce:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Wait for debounce period
+        env:
+          DEBOUNCE_SECONDS: 3600
+        run: |
+          hours=$((DEBOUNCE_SECONDS / 3600))
+          mins=$(((DEBOUNCE_SECONDS % 3600) / 60))
+          if [ $hours -gt 0 ]; then
+            time_str="${hours}h"
+            [ $mins -gt 0 ] && time_str="${time_str} ${mins}m"
+          else
+            time_str="${mins}m"
+          fi
+          echo "Waiting $time_str before dispatching agents..."
+          echo "If another push occurs, this run will be cancelled."
+          sleep $DEBOUNCE_SECONDS
+
+      - name: Dispatch agents
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const agents = [
+              {
+                trigger: '/audit-agents',
+                label: 'agents-audit',
+                title: 'AGENTS.md Audit',
+                description: 'Verify AGENTS.md accuracy against codebase'
+              },
+              // Add more agents here:
+              // {
+              //   trigger: '/check-types',
+              //   label: 'type-check',
+              //   title: 'Type Coverage Check',
+              //   description: 'Analyze TypeScript type coverage'
+              // },
+            ];
+            
+            const dateStr = new Date().toISOString().split('T')[0];
+            
+            for (const agent of agents) {
+              // Check for existing open issue with this label
+              const { data: issues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: agent.label
+              });
+              
+              let issueNumber;
+              
+              if (issues.length > 0) {
+                issueNumber = issues[0].number;
+                console.log(`Found existing ${agent.label} issue #${issueNumber}`);
+              } else {
+                const { data: issue } = await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: `${agent.title} - ${dateStr}`,
+                  body: `Automated: ${agent.description}`,
+                  labels: [agent.label]
+                });
+                issueNumber = issue.number;
+                console.log(`Created ${agent.label} issue #${issueNumber}`);
+              }
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: agent.trigger
+              });
+              
+              console.log(`Dispatched ${agent.trigger} on issue #${issueNumber}`);
+            }

@@ -1,9 +1,9 @@
 ## Code Style
 
-- Avoid `else`, `try`/`catch`, `let`, `any`, unnecessary destructuring
+- Prefer early returns over `else`; prefer null returns over `try`/`catch`; prefer `const` over `let`; avoid `any`
 - Prefer single-word variable names
 - Prefer Bun APIs (`Bun.file()`, `Bun.spawnSync()`, etc.)
-- No trivial comments restating code
+- Avoid trivial comments restating code
 
 ## Architecture
 
@@ -25,13 +25,13 @@ File tree generation (`src/tree/file-tree.ts`) uses the `ignore` npm package to 
 
 Tool names are generated from directory paths relative to the engrams base: `engram_foo_bar` for `.engrams/foo/bar/`. The `generateToolName()` function in `manifest.ts` normalizes hyphens to underscores.
 
-Git operations use `Bun.spawnSync()` with three wrappers in `index-ref.ts`: `git()` returns stdout or null on failure, `gitOk()` returns boolean success, `gitExec()` throws with command context on failure. Use the appropriate wrapper based on whether failure is expected.
+Git operations use `Bun.spawnSync()` with three wrappers in `src/cli/index-ref.ts`: `git()` returns stdout or null on failure, `gitOk()` returns boolean success, `gitExec()` throws with command context on failure. Use the appropriate wrapper based on whether failure is expected.
 
 The CLI uses `cmd-ts` for type-safe argument parsing. Multi-value options use `multioption({ type: array(string) })`. Commands live in `src/cli/commands/` and are assembled in `src/cli/index.ts`.
 
 ## Build Outputs
 
-`bun run build` produces three artifacts: `dist/index.js` (plugin entry), `dist/engrams.bundle.js` (minified bundle with `zod` and `@opencode-ai/plugin` external), `dist/engram` (compiled CLI binary via `--compile`).
+`bun run build` produces 3 artifacts: `dist/index.js` (plugin entry), `dist/engrams.bundle.js` (minified bundle with `zod` and `@opencode-ai/plugin` external), `dist/engram` (compiled CLI binary via `--compile`).
 
 ## Lint
 
