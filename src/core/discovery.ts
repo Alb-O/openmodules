@@ -220,9 +220,27 @@ export async function discoverEngrams(basePaths: unknown): Promise<Engram[]> {
           `  ${d.toolName}:\n${d.paths.map((p) => `    - ${p}`).join("\n")}`,
       )
       .join("\n");
-    throw new Error(
-      `Duplicate tool names detected. Each engram must have a unique path.\n${details}`,
+    logWarning(
+      `Duplicate tool names detected. Keeping first occurrence of each:\n${details}\n\n` +
+        `To fix: rename one of the conflicting engrams, or remove the duplicate.\n` +
+        `Each engram directory name must be unique across local and global paths.`,
     );
+
+    const duplicateToolNames = new Set(duplicates.map((d) => d.toolName));
+    const seenToolNames = new Set<string>();
+    const filteredEngrams = engrams.filter((engram) => {
+      if (!duplicateToolNames.has(engram.toolName)) {
+        return true;
+      }
+      if (seenToolNames.has(engram.toolName)) {
+        return false;
+      }
+      seenToolNames.add(engram.toolName);
+      return true;
+    });
+
+    await establishEngramHierarchy(filteredEngrams);
+    return filteredEngrams;
   }
 
   await establishEngramHierarchy(engrams);

@@ -33,7 +33,7 @@ describe("discovery", () => {
   });
 
   describe("discoverEngrams", () => {
-    it("throws error when duplicate tool names are detected across multiple base paths", async () => {
+    it("warns and keeps first occurrence when duplicate tool names are detected", async () => {
       const configDir = path.join(tempDir, "config");
       const projectDir = path.join(tempDir, "project");
       const sharedName = "shared-engram";
@@ -49,9 +49,10 @@ describe("discovery", () => {
         "Project description is even longer for testing.",
       );
 
-      await expect(discoverEngrams([configDir, projectDir])).rejects.toThrow(
-        /Duplicate tool names detected/,
-      );
+      const engrams = await discoverEngrams([configDir, projectDir]);
+
+      expect(engrams.length).toBe(1);
+      expect(engrams[0]?.description).toBe("Config description is long enough.");
     });
   });
 
