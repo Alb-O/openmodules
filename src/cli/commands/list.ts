@@ -183,21 +183,28 @@ function getTriggerSummary(
     (activation?.anyMsg?.length || 0) +
     (activation?.userMsg?.length || 0) +
     (activation?.agentMsg?.length || 0);
-  const total = disclosureCount + activationCount;
 
-  if (total === 0) return colors.green("always visible");
+  if (disclosureCount === 0 && activationCount === 0) {
+    return colors.green("✓");
+  }
 
   const parts: string[] = [];
-  if (disclosureCount > 0) parts.push(`${disclosureCount} disclosure`);
-  if (activationCount > 0) parts.push(`${activationCount} activation`);
+  if (disclosureCount > 0) parts.push(`${disclosureCount}D`);
+  if (activationCount > 0) parts.push(`${activationCount}A`);
 
-  return colors.dim(parts.join(", "));
+  return colors.dim(`(${parts.join("/")})`);
+}
+
+function stripAnsi(str: string): string {
+  return str.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
 function printEngramTree(
   engrams: EngramInfo[],
   prefix = "",
   isLast = true,
+  lineWidth = 90,
+  triggerCol = 80,
 ): void {
   for (let i = 0; i < engrams.length; i++) {
     const eg = engrams[i];
@@ -207,22 +214,16 @@ function printEngramTree(
 
     const statusDot = getStatusDot(eg);
 
-    const nameDisplay =
-      eg.displayName !== eg.name
-        ? `${colors.bold(eg.name)} ${colors.dim(`(${eg.displayName})`)}`
-        : colors.bold(eg.name);
-
-    const maxDescLen = 50;
-    let desc = "";
-    if (eg.description) {
-      desc = eg.description.length > maxDescLen
-        ? eg.description.slice(0, maxDescLen - 3) + "..."
-        : eg.description;
-    }
-    const descDisplay = desc ? colors.dim(` - ${desc}`) : "";
+    // Show displayName, with slug in dim only if meaningfully different
+    const slugLower = eg.name.toLowerCase().replace(/[-_]/g, "");
+    const displayLower = eg.displayName.toLowerCase().replace(/\s+/g, "");
+    const showSlug = slugLower !== displayLower;
+    const nameDisplay = showSlug
+      ? `${colors.bold(eg.displayName)} ${colors.dim(`[${eg.name}]`)}`
+      : colors.bold(eg.displayName);
 
     const triggerDisplay = getTriggerSummary(eg.disclosureTriggers, eg.activationTriggers);
-    const triggerPart = triggerDisplay ? ` [${triggerDisplay}]` : "";
+    const triggerLen = stripAnsi(triggerDisplay).length;
 
     let warning = "";
     if (!eg.hasToml && !eg.fromIndex) {
@@ -231,12 +232,33 @@ function printEngramTree(
       warning = colors.red(` (parse error: ${eg.parseError})`);
     }
 
-    raw(
-      `${prefix}${connector} ${statusDot} ${nameDisplay}${descDisplay}${triggerPart}${warning}`,
-    );
+    // Build left side: prefix + connector + dot + name + description
+    const leftPrefix = `${prefix}${connector} ${statusDot} ${nameDisplay}`;
+    const leftPrefixLen = stripAnsi(leftPrefix).length;
+
+    // Calculate space for description (leave room for padding + trigger)
+    const availableForDesc = Math.max(0, triggerCol - leftPrefixLen - 4); // 4 = " — " + padding
+
+    let descDisplay = "";
+    if (eg.description && availableForDesc > 10) {
+      const desc =
+        eg.description.length > availableForDesc
+          ? eg.description.slice(0, availableForDesc - 1) + "…"
+          : eg.description;
+      descDisplay = ` ${colors.dim("—")} ${colors.dim(desc)}`;
+    }
+
+    const leftSide = `${leftPrefix}${descDisplay}${warning}`;
+    const leftSideLen = stripAnsi(leftSide).length;
+
+    // Pad to align trigger column
+    const padding = Math.max(1, triggerCol - leftSideLen);
+    const line = `${leftSide}${" ".repeat(padding)}${triggerDisplay}`;
+
+    raw(line);
 
     if (eg.children.length > 0) {
-      printEngramTree(eg.children, prefix + childPrefix, isLastItem);
+      printEngramTree(eg.children, prefix + childPrefix, isLastItem, lineWidth, triggerCol);
     }
   }
 }
@@ -392,7 +414,13 @@ export const list = command({
         printEngramTree(localEngrams);
       }
     }
-
-    raw(`\n● initialized  ◐ lazy  ○ not initialized`);
+    
+    // Footer/legend
+    raw(
+      colors.dim("─".repeat(90) + "\n") +
+      colors.dim("● ready  ◐ lazy  ○ not initialized") + "\n" +
+      colors.dim("        ✓ = always visible as tool") + "\n" +
+      colors.dim("(XD/XA) X = no. of disclosure/activation triggers")
+    );
   },
 });

@@ -47,6 +47,11 @@ utils:
       - kind: expression_statement
       - has:
           pattern: error($$$)
+  raw-stmt:
+    all:
+      - kind: expression_statement
+      - has:
+          pattern: raw($$$)
 rule:
   any:
     - all:
@@ -61,3 +66,7 @@ rule:
         - matches: log-stmt
         - follows:
             matches: log-stmt
+    - all:
+        - matches: raw-stmt
+        - follows:
+            matches: raw-stmt
