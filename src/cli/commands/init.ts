@@ -6,6 +6,7 @@ import { info, success, fail } from "../../logging";
 import { installPlugin, getBundledPluginPath } from "../cache";
 import { findProjectRoot } from "../utils";
 import { configureAutoFetch, fetchIndex, indexExists } from "../index-ref";
+import { ENGRAMS_DIR } from "../../constants";
 
 export const init = command({
   name: "init",
@@ -63,7 +64,7 @@ export const init = command({
 
     info(`  ${result.path}`);
 
-    const openmodulesDir = path.join(targetDir, ".engrams");
+    const openmodulesDir = path.join(targetDir, ENGRAMS_DIR);
     if (!fs.existsSync(openmodulesDir)) {
       fs.mkdirSync(openmodulesDir, { recursive: true });
       info(`Created ${openmodulesDir}/`);

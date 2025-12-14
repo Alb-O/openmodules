@@ -15,6 +15,7 @@ import {
   writeIndex,
   parseEngramToml,
 } from "../index-ref";
+import { ENGRAMS_DIR, MANIFEST_FILENAME } from "../../constants";
 
 export const add = command({
   name: "add",
@@ -205,16 +206,16 @@ function updateIndexAfterAdd(
   engramName: string,
   url: string,
 ): void {
-  const tomlPath = path.join(projectRoot, ".engrams", engramName, "engram.toml");
+  const tomlPath = path.join(projectRoot, ENGRAMS_DIR, engramName, MANIFEST_FILENAME);
 
   if (!fs.existsSync(tomlPath)) {
-    info("No engram.toml found, skipping index update");
+    info(`No ${MANIFEST_FILENAME} found, skipping index update`);
     return;
   }
 
   const entry = parseEngramToml(tomlPath);
   if (!entry) {
-    info("Could not parse engram.toml, skipping index update");
+    info(`Could not parse ${MANIFEST_FILENAME}, skipping index update`);
     return;
   }
 

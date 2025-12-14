@@ -4,6 +4,7 @@ import { dirname, join, sep } from "node:path";
 import type { Engram } from "./types";
 import { logWarning } from "../logging";
 import { MANIFEST_FILENAME, parseEngram, generateToolName } from "./manifest";
+import { INDEX_REF, ENGRAMS_DIR } from "../constants";
 
 /**
  * Run a git command and return stdout, or null if it fails.
@@ -235,7 +236,7 @@ export function getDefaultEngramPaths(rootDir: string): string[] {
     ? join(xdgConfigHome, "engrams")
     : join(os.homedir(), ".config", "engrams");
 
-  return [globalEngramsPath, join(rootDir, ".engrams")];
+  return [globalEngramsPath, join(rootDir, ENGRAMS_DIR)];
 }
 
 /** Entry from refs/engrams/index */
@@ -268,8 +269,6 @@ interface IndexEntry {
 }
 
 type EngramIndex = Record<string, IndexEntry>;
-
-const INDEX_REF = "refs/engrams/index";
 
 /**
  * Read the engram index from refs/engrams/index in a git repo
@@ -385,7 +384,7 @@ export async function discoverEngramsWithLazy(
 
   if (repoPath) {
     const paths = normalizeBasePaths(basePaths);
-    const localEngramsDir = paths.find((p) => p.includes(".engrams"));
+    const localEngramsDir = paths.find((p) => p.includes(ENGRAMS_DIR));
 
     if (localEngramsDir) {
       const lazyEngrams = await getEngramsFromIndex(repoPath, localEngramsDir);

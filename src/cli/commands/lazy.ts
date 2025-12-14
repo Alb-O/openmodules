@@ -10,7 +10,7 @@ import {
   initSubmodule,
   isSubmoduleInitialized,
 } from "../index-ref";
-import { CONTENT_DIR } from "./wrap";
+import { CONTENT_DIR, MANIFEST_FILENAME, ENGRAMS_DIR } from "../../constants";
 import { cloneWithSparseCheckout } from "../cache";
 
 interface WrapConfig {
@@ -40,7 +40,7 @@ function isWrapInitialized(engramDir: string): boolean {
  * Read and parse engram.toml from a directory.
  */
 function readEngramToml(engramDir: string): EngramToml | null {
-  const tomlPath = path.join(engramDir, "engram.toml");
+  const tomlPath = path.join(engramDir, MANIFEST_FILENAME);
   if (!fs.existsSync(tomlPath)) return null;
   
   const content = fs.readFileSync(tomlPath, "utf-8");
@@ -144,7 +144,7 @@ export const lazyInit = command({
       let skipped = 0;
 
       for (const engramName of Object.keys(index)) {
-        const submodulePath = `.engrams/${engramName}`;
+        const submodulePath = `${ENGRAMS_DIR}/${engramName}`;
 
         if (isSubmoduleInitialized(projectRoot, submodulePath)) {
           skipped++;
@@ -173,7 +173,7 @@ export const lazyInit = command({
       process.exit(1);
     }
 
-    const submodulePath = `.engrams/${name}`;
+    const submodulePath = `${ENGRAMS_DIR}/${name}`;
 
     if (isSubmoduleInitialized(projectRoot, submodulePath)) {
       warn(`Engram '${name}' is already initialized`);
@@ -240,7 +240,7 @@ export const showIndex = command({
     log(colors.bold("Engram Index") + colors.dim(" (refs/engrams/index)\n"));
 
     for (const [name, entry] of Object.entries(index)) {
-      const submodulePath = `.engrams/${name}`;
+      const submodulePath = `${ENGRAMS_DIR}/${name}`;
       const initialized = isSubmoduleInitialized(projectRoot, submodulePath);
       const status = initialized
         ? colors.green("●")

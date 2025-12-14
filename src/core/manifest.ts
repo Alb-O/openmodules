@@ -3,11 +3,12 @@ import { basename, dirname, join, relative, sep } from "node:path";
 import { z } from "zod";
 import type { Engram, TriggerConfig } from "./types";
 import { logWarning, logError } from "../logging";
+import {
+  MANIFEST_FILENAME,
+  DEFAULT_PROMPT_FILENAME,
+} from "../constants";
 
-/** Manifest filename at engram root */
-export const MANIFEST_FILENAME = "engram.toml";
-/** Default prompt file relative to engram root */
-const DEFAULT_PROMPT_PATH = "README.md";
+export { MANIFEST_FILENAME };
 
 /** Schema for trigger configuration (shared between disclosure and activation) */
 const TriggerConfigSchema = z.object({
@@ -155,7 +156,7 @@ export async function parseEngram(
     }
 
     // Read prompt file (configurable via manifest, defaults to README.md at engram root)
-    const promptRelativePath = parsed.data.prompt || DEFAULT_PROMPT_PATH;
+    const promptRelativePath = parsed.data.prompt || DEFAULT_PROMPT_FILENAME;
     const promptPath = join(engramDirectory, promptRelativePath);
 
     let promptContent = "";

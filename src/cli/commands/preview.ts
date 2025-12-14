@@ -5,6 +5,11 @@ import * as TOML from "@iarna/toml";
 import { info, fail, log } from "../../logging";
 import { getModulePaths, findProjectRoot, shortenPath } from "../utils";
 import { generateFileTree } from "../../tree/file-tree";
+import {
+  MANIFEST_FILENAME,
+  DEFAULT_PROMPT_FILENAME,
+  CONTENT_DIR,
+} from "../../constants";
 
 interface Engram {
   name: string;
@@ -40,7 +45,7 @@ async function parseEngram(
 
     const engramDirectory = path.dirname(manifestPath);
 
-    const promptRelativePath = parsed.prompt || "README.md";
+    const promptRelativePath = parsed.prompt || DEFAULT_PROMPT_FILENAME;
     const promptPath = path.join(engramDirectory, promptRelativePath);
 
     let promptContent = "";
@@ -78,14 +83,14 @@ function findEngram(
 
   if (paths.local) {
     const localPath = path.join(paths.local, name);
-    const manifestPath = path.join(localPath, "engram.toml");
+    const manifestPath = path.join(localPath, MANIFEST_FILENAME);
     if (fs.existsSync(manifestPath)) {
       return { path: localPath, manifestPath };
     }
   }
 
   const globalPath = path.join(paths.global, name);
-  const manifestPath = path.join(globalPath, "engram.toml");
+  const manifestPath = path.join(globalPath, MANIFEST_FILENAME);
   if (fs.existsSync(manifestPath)) {
     return { path: globalPath, manifestPath };
   }
@@ -120,7 +125,7 @@ export const preview = command({
       process.exit(1);
     }
 
-    const contentDir = path.join(found.path, "content");
+    const contentDir = path.join(found.path, CONTENT_DIR);
     const isWrapped = !!engram.wrap;
     const isInitialized = !isWrapped || fs.existsSync(contentDir);
 

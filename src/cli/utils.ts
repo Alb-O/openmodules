@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { ENGRAMS_DIR } from "../constants";
 
 export interface ModulePaths {
   global: string;
@@ -15,7 +16,7 @@ export function getModulePaths(projectRoot?: string): ModulePaths {
 
   return {
     global: globalPath,
-    local: projectRoot ? path.join(projectRoot, ".engrams") : null,
+    local: projectRoot ? path.join(projectRoot, ENGRAMS_DIR) : null,
   };
 }
 
@@ -23,7 +24,7 @@ export function findProjectRoot(): string | null {
   let dir = process.cwd();
   while (dir !== path.dirname(dir)) {
     const gitDir = path.join(dir, ".git");
-    const openmodulesDir = path.join(dir, ".engrams");
+    const openmodulesDir = path.join(dir, ENGRAMS_DIR);
     if (existsSync(gitDir) || existsSync(openmodulesDir)) {
       return dir;
     }

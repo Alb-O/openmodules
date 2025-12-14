@@ -4,18 +4,24 @@ import * as path from "node:path";
 import { info, success, warn, fail, log } from "../../logging";
 import { getModulePaths, findProjectRoot, parseRepoUrl, getEngramName } from "../utils";
 import { cloneWithSparseCheckout } from "../cache";
+import {
+  CONTENT_DIR,
+  MANIFEST_FILENAME,
+  DEFAULT_PROMPT_FILENAME,
+  ONELINER_FILENAME,
+  ONELINER_TXT_FILENAME,
+} from "../../constants";
 
-/** Subdirectory where cloned repo content lives */
-export const CONTENT_DIR = "content";
+export { CONTENT_DIR };
 
 /** Files that are engram-specific manifest files */
 export const MANIFEST_FILES = new Set([
-  "engram.toml",
-  "README.md",
+  MANIFEST_FILENAME,
+  DEFAULT_PROMPT_FILENAME,
   ".gitignore",
   ".ignore",
-  ".oneliner",
-  ".oneliner.txt",
+  ONELINER_FILENAME,
+  ONELINER_TXT_FILENAME,
 ]);
 
 /**
@@ -282,8 +288,8 @@ export const wrap = command({
       fs.symlinkSync(relativePath, targetDir);
     }
 
-    const manifestPath = path.join(targetDir, "engram.toml");
-    const readmePath = path.join(targetDir, "README.md");
+    const manifestPath = path.join(targetDir, MANIFEST_FILENAME);
+    const readmePath = path.join(targetDir, DEFAULT_PROMPT_FILENAME);
     const hasManifest = fs.existsSync(manifestPath);
 
     if (hasManifest) {

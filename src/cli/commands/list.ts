@@ -5,6 +5,7 @@ import * as TOML from "@iarna/toml";
 import { info, log, colors } from "../../logging";
 import { getModulePaths, findProjectRoot, shortenPath } from "../utils";
 import { readIndex, isSubmoduleInitialized } from "../index-ref";
+import { MANIFEST_FILENAME, CONTENT_DIR, ENGRAMS_DIR } from "../../constants";
 
 interface EngramInfo {
   name: string;
@@ -102,7 +103,7 @@ function parseEngramToml(tomlPath: string): {
 }
 
 function isWrappedEngramInitialized(engramPath: string): boolean {
-  const contentDir = path.join(engramPath, "content");
+  const contentDir = path.join(engramPath, CONTENT_DIR);
   return fs.existsSync(contentDir);
 }
 
@@ -133,7 +134,7 @@ function scanEngramsRecursive(
 
     if (isDir) {
       const engramPath = path.join(dir, entry.name);
-      const tomlPath = path.join(engramPath, "engram.toml");
+      const tomlPath = path.join(engramPath, MANIFEST_FILENAME);
       const hasToml = fs.existsSync(tomlPath);
 
       const tomlData = hasToml ? parseEngramToml(tomlPath) : null;
@@ -256,7 +257,7 @@ function getUninitializedFromIndex(
   for (const [name, entry] of Object.entries(index)) {
     if (existingNames.has(name)) continue;
 
-    const submodulePath = `.engrams/${name}`;
+    const submodulePath = `${ENGRAMS_DIR}/${name}`;
     if (!isSubmoduleInitialized(projectRoot, submodulePath)) {
       const disclosureTriggers = entry["disclosure-triggers"]
         ? {

@@ -5,12 +5,13 @@ import ignore, { type Ignore } from "ignore";
 import type { FileTreeOptions } from "../core/types";
 import { logWarning } from "../logging";
 import { extractOneliner } from "./comment-parser";
+import { ONELINER_PATTERN, ONELINER_FILENAMES } from "../constants";
 
 // Hide these files/directories by default. The manifest is already parsed, agent doesn't need to see it.
 const DEFAULT_EXCLUDE_PATTERNS = [
   /^engram\.toml$/,
   /^\.ignore$/,
-  /^\.oneliner(\.txt)?$/,
+  ONELINER_PATTERN,
   /\.git/,
   /node_modules/,
   /dist/,
@@ -44,7 +45,7 @@ async function loadIgnoreFile(filePath: string): Promise<Ignore | null> {
  * Returns the raw content as description, or null if not found.
  */
 async function getDirOneliner(dirPath: string): Promise<string | null> {
-  for (const filename of [".oneliner", ".oneliner.txt"]) {
+  for (const filename of ONELINER_FILENAMES) {
     const file = Bun.file(join(dirPath, filename));
     if (!(await file.exists())) continue;
 

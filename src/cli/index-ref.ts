@@ -9,6 +9,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 import TOML from "@iarna/toml";
+import { INDEX_REF, ENGRAMS_DIR, MANIFEST_FILENAME } from "../constants";
 
 export interface EngramIndexEntry {
   name: string;
@@ -42,8 +43,6 @@ export interface EngramIndexEntry {
 }
 
 export type EngramIndex = Record<string, EngramIndexEntry>;
-
-const INDEX_REF = "refs/engrams/index";
 
 /**
  * Run a git command and return stdout, or null if it fails.
@@ -216,7 +215,7 @@ export function isSubmoduleInitialized(
   submodulePath: string,
 ): boolean {
   const fullPath = path.join(repoPath, submodulePath);
-  const tomlPath = path.join(fullPath, "engram.toml");
+  const tomlPath = path.join(fullPath, MANIFEST_FILENAME);
   return existsSync(tomlPath);
 }
 
@@ -235,7 +234,7 @@ export function initSubmodule(
  */
 export function buildIndexFromEngrams(repoPath: string): EngramIndex {
   const index: EngramIndex = {};
-  const engramsDir = path.join(repoPath, ".engrams");
+  const engramsDir = path.join(repoPath, ENGRAMS_DIR);
 
   if (!existsSync(engramsDir)) {
     return index;
@@ -247,7 +246,7 @@ export function buildIndexFromEngrams(repoPath: string): EngramIndex {
     if (!entry.isDirectory()) continue;
 
     const engramPath = path.join(engramsDir, entry.name);
-    const tomlPath = path.join(engramPath, "engram.toml");
+    const tomlPath = path.join(engramPath, MANIFEST_FILENAME);
 
     if (!existsSync(tomlPath)) continue;
 
@@ -274,7 +273,7 @@ export function buildIndexFromEngrams(repoPath: string): EngramIndex {
           delete (parsed.wrap as Record<string, unknown>).locked;
         }
       } else {
-        const submodulePath = `.engrams/${entry.name}`;
+        const submodulePath = `${ENGRAMS_DIR}/${entry.name}`;
         const url = getSubmoduleUrl(repoPath, submodulePath);
         if (url) {
           parsed.url = url;
