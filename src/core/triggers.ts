@@ -159,6 +159,13 @@ function compileTriggerConfig(config?: TriggerConfig): CompiledTriggerRegexes {
     containsStarWildcard(config?.userMsg) ||
     containsStarWildcard(config?.agentMsg);
 
+  // Check if section was explicitly declared but has no patterns (never match)
+  const hasPatterns =
+    (config?.anyMsg?.length ?? 0) > 0 ||
+    (config?.userMsg?.length ?? 0) > 0 ||
+    (config?.agentMsg?.length ?? 0) > 0;
+  const neverMatch = config?.explicit === true && !hasPatterns;
+
   return {
     anyMsgRegexes: (config?.anyMsg ?? []).flatMap((t) =>
       compileContextTrigger(t),
@@ -170,11 +177,13 @@ function compileTriggerConfig(config?: TriggerConfig): CompiledTriggerRegexes {
       compileContextTrigger(t),
     ),
     alwaysMatch,
+    neverMatch,
   };
 }
 
 /** Check if a CompiledTriggerRegexes has any patterns (or always matches) */
 function hasRegexes(regexes: CompiledTriggerRegexes): boolean {
+  if (regexes.neverMatch) return true; // Explicit empty = has "never" trigger
   return (
     regexes.alwaysMatch ||
     regexes.anyMsgRegexes.length > 0 ||

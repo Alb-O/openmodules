@@ -6,6 +6,8 @@ export interface TriggerConfig {
   userMsg?: string[];
   /** Triggers that only match agent messages */
   agentMsg?: string[];
+  /** True if the trigger section was explicitly declared (even if empty) */
+  explicit?: boolean;
 }
 
 export interface Engram {
@@ -65,6 +67,8 @@ export interface CompiledTriggerRegexes {
   agentMsgRegexes: RegExp[];
   /** True if any trigger array contains a bare "*" (always matches) */
   alwaysMatch: boolean;
+  /** True if triggers were explicitly declared but empty (never matches) */
+  neverMatch: boolean;
 }
 
 /** Compiled matcher derived from an engram's triggers */

@@ -13,6 +13,7 @@ interface EngramChainNode {
   path: string;
   depth: number;
   hasTriggers: boolean;
+  isManualOnly: boolean;
   disclosureCount: number;
   activationCount: number;
 }
@@ -42,17 +43,21 @@ function parseEngramToml(tomlPath: string): {
   name?: string;
   disclosureCount: number;
   activationCount: number;
+  disclosureExplicit: boolean;
+  activationExplicit: boolean;
 } {
   try {
     const content = fs.readFileSync(tomlPath, "utf-8");
     const parsed = TOML.parse(content) as EngramToml;
 
+    const disclosureExplicit = "disclosure-triggers" in parsed;
     const rawDisclosure = parsed["disclosure-triggers"];
     const disclosureCount =
       (rawDisclosure?.["any-msg"]?.length || 0) +
       (rawDisclosure?.["user-msg"]?.length || 0) +
       (rawDisclosure?.["agent-msg"]?.length || 0);
 
+    const activationExplicit = "activation-triggers" in parsed;
     const rawActivation = parsed["activation-triggers"];
     const activationCount =
       (rawActivation?.["any-msg"]?.length || 0) +
@@ -63,9 +68,11 @@ function parseEngramToml(tomlPath: string): {
       name: parsed.name,
       disclosureCount,
       activationCount,
+      disclosureExplicit,
+      activationExplicit,
     };
   } catch {
-    return { disclosureCount: 0, activationCount: 0 };
+    return { disclosureCount: 0, activationCount: 0, disclosureExplicit: false, activationExplicit: false };
   }
 }
 
@@ -148,6 +155,10 @@ function buildChain(
       const tomlData = parseEngramToml(manifestPath);
       const toolName = generateToolName(current, baseDir);
       const name = path.basename(current);
+      
+      const hasExplicitTriggers = tomlData.disclosureExplicit || tomlData.activationExplicit;
+      const hasPatterns = tomlData.disclosureCount > 0 || tomlData.activationCount > 0;
+      const isManualOnly = hasExplicitTriggers && !hasPatterns;
 
       chain.unshift({
         name,
@@ -155,7 +166,8 @@ function buildChain(
         toolName,
         path: current,
         depth: chain.length,
-        hasTriggers: tomlData.disclosureCount > 0 || tomlData.activationCount > 0,
+        hasTriggers: hasPatterns,
+        isManualOnly,
         disclosureCount: tomlData.disclosureCount,
         activationCount: tomlData.activationCount,
       });
@@ -218,7 +230,9 @@ export const chain = command({
     if (chainNodes.length === 1) {
       raw(colors.green("✓") + " Root-level engram (no ancestors)");
       const node = chainNodes[0];
-      if (!node.hasTriggers) {
+      if (node.isManualOnly) {
+        raw(colors.red("✗") + " Manual activation only (never auto-disclosed)");
+      } else if (!node.hasTriggers) {
         raw(colors.green("✓") + " Permanently visible (no triggers)");
       } else {
         raw(colors.yellow("⧖") + ` Requires disclosure (${node.disclosureCount}D/${node.activationCount}A triggers)`);
@@ -236,7 +250,10 @@ export const chain = command({
       let statusIcon: string;
       let statusText: string;
 
-      if (!node.hasTriggers) {
+      if (node.isManualOnly) {
+        statusIcon = colors.red("⊗");
+        statusText = colors.red("manual");
+      } else if (!node.hasTriggers) {
         statusIcon = colors.green("●");
         statusText = colors.green("permanent");
       } else {
@@ -252,8 +269,16 @@ export const chain = command({
     });
     raw(chainLines.join("\n") + "\n");
 
+    const manualOnly = chainNodes.filter((n) => n.isManualOnly);
     const requiresTriggers = chainNodes.filter((n) => n.hasTriggers);
-    if (requiresTriggers.length === 0) {
+
+    if (manualOnly.length > 0) {
+      const manualLines = manualOnly.map((node) => colors.dim(`   - ${node.toolName}`));
+      raw(
+        colors.red("✗") + ` ${manualOnly.length} engram(s) are manual-only (will never auto-disclose):\n` +
+        manualLines.join("\n")
+      );
+    } else if (requiresTriggers.length === 0) {
       raw(
         colors.green("✓") + " All ancestors are permanently visible\n" +
         colors.green("✓") + " This engram will be available immediately"

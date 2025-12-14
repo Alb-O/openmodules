@@ -26,8 +26,9 @@ function shortenPath(filePath: string): string {
   return filePath;
 }
 
-/** Check if compiled regexes have any patterns (or always match) */
+/** Check if compiled regexes have any patterns (or always/never match) */
 function hasRegexes(regexes: CompiledTriggerRegexes): boolean {
+  if (regexes.neverMatch) return true; // Explicit empty = has "never" trigger
   return (
     regexes.alwaysMatch ||
     regexes.anyMsgRegexes.length > 0 ||
@@ -43,6 +44,9 @@ function matchesTriggers(
   agentText: string,
   allText: string,
 ): boolean {
+  if (regexes.neverMatch) {
+    return false;
+  }
   if (regexes.alwaysMatch) {
     return true;
   }

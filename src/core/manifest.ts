@@ -110,19 +110,15 @@ export function generateToolName(engramPath: string, baseDir?: string): string {
 /** Convert TOML trigger config to internal TriggerConfig format */
 function parseTriggerConfig(
   config: z.infer<typeof TriggerConfigSchema> | undefined,
+  sectionDeclared: boolean,
 ): TriggerConfig | undefined {
-  if (!config) return undefined;
-
-  const hasAny = (config["any-msg"]?.length ?? 0) > 0;
-  const hasUser = (config["user-msg"]?.length ?? 0) > 0;
-  const hasAgent = (config["agent-msg"]?.length ?? 0) > 0;
-
-  if (!hasAny && !hasUser && !hasAgent) return undefined;
+  if (!config && !sectionDeclared) return undefined;
 
   return {
-    anyMsg: config["any-msg"],
-    userMsg: config["user-msg"],
-    agentMsg: config["agent-msg"],
+    anyMsg: config?.["any-msg"],
+    userMsg: config?.["user-msg"],
+    agentMsg: config?.["agent-msg"],
+    explicit: sectionDeclared,
   };
 }
 
@@ -171,9 +167,11 @@ export async function parseEngram(
 
     const disclosureTriggers = parseTriggerConfig(
       parsed.data["disclosure-triggers"],
+      "disclosure-triggers" in manifestData,
     );
     const activationTriggers = parseTriggerConfig(
       parsed.data["activation-triggers"],
+      "activation-triggers" in manifestData,
     );
 
     return {

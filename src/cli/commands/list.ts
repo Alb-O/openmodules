@@ -19,11 +19,13 @@ interface EngramInfo {
     anyMsg?: string[];
     userMsg?: string[];
     agentMsg?: string[];
+    explicit?: boolean;
   };
   activationTriggers?: {
     anyMsg?: string[];
     userMsg?: string[];
     agentMsg?: string[];
+    explicit?: boolean;
   };
   children: EngramInfo[];
   depth: number;
@@ -61,8 +63,8 @@ function getStatusDot(eg: { initialized: boolean; isWrapped?: boolean }): string
 function parseEngramToml(tomlPath: string): {
   name?: string;
   description?: string;
-  disclosureTriggers?: { anyMsg?: string[]; userMsg?: string[]; agentMsg?: string[] };
-  activationTriggers?: { anyMsg?: string[]; userMsg?: string[]; agentMsg?: string[] };
+  disclosureTriggers?: { anyMsg?: string[]; userMsg?: string[]; agentMsg?: string[]; explicit?: boolean };
+  activationTriggers?: { anyMsg?: string[]; userMsg?: string[]; agentMsg?: string[]; explicit?: boolean };
   hasWrap?: boolean;
   error?: string;
 } {
@@ -70,21 +72,25 @@ function parseEngramToml(tomlPath: string): {
     const content = fs.readFileSync(tomlPath, "utf-8");
     const parsed = TOML.parse(content) as EngramToml;
     
+    const disclosureDeclared = "disclosure-triggers" in parsed;
     const rawDisclosure = parsed["disclosure-triggers"];
-    const disclosureTriggers = rawDisclosure
+    const disclosureTriggers = disclosureDeclared
       ? {
-          anyMsg: rawDisclosure["any-msg"],
-          userMsg: rawDisclosure["user-msg"],
-          agentMsg: rawDisclosure["agent-msg"],
+          anyMsg: rawDisclosure?.["any-msg"],
+          userMsg: rawDisclosure?.["user-msg"],
+          agentMsg: rawDisclosure?.["agent-msg"],
+          explicit: true,
         }
       : undefined;
       
+    const activationDeclared = "activation-triggers" in parsed;
     const rawActivation = parsed["activation-triggers"];
-    const activationTriggers = rawActivation
+    const activationTriggers = activationDeclared
       ? {
-          anyMsg: rawActivation["any-msg"],
-          userMsg: rawActivation["user-msg"],
-          agentMsg: rawActivation["agent-msg"],
+          anyMsg: rawActivation?.["any-msg"],
+          userMsg: rawActivation?.["user-msg"],
+          agentMsg: rawActivation?.["agent-msg"],
+          explicit: true,
         }
       : undefined;
       
@@ -184,8 +190,17 @@ function getTriggerSummary(
     (activation?.userMsg?.length || 0) +
     (activation?.agentMsg?.length || 0);
 
-  if (disclosureCount === 0 && activationCount === 0) {
+  const disclosureExplicit = disclosure?.explicit === true;
+  const activationExplicit = activation?.explicit === true;
+
+  // No triggers declared at all → permanently visible
+  if (!disclosureExplicit && !activationExplicit) {
     return colors.dim("P");
+  }
+
+  // Triggers declared but all empty → manual activation only
+  if (disclosureCount === 0 && activationCount === 0) {
+    return colors.dim("M");
   }
 
   const parts: string[] = [];
@@ -280,6 +295,25 @@ function countEngrams(engrams: EngramInfo[]): number {
 }
 
 function isPermanentlyVisible(eg: EngramInfo): boolean {
+  const disclosureExplicit = eg.disclosureTriggers?.explicit === true;
+  const activationExplicit = eg.activationTriggers?.explicit === true;
+  
+  // If any trigger section is explicitly declared, it's not permanently visible
+  if (disclosureExplicit || activationExplicit) {
+    return false;
+  }
+  
+  return true;
+}
+
+function isManualOnly(eg: EngramInfo): boolean {
+  const disclosureExplicit = eg.disclosureTriggers?.explicit === true;
+  const activationExplicit = eg.activationTriggers?.explicit === true;
+  
+  if (!disclosureExplicit && !activationExplicit) {
+    return false;
+  }
+  
   const disclosureCount = 
     (eg.disclosureTriggers?.anyMsg?.length || 0) +
     (eg.disclosureTriggers?.userMsg?.length || 0) +
@@ -288,11 +322,12 @@ function isPermanentlyVisible(eg: EngramInfo): boolean {
     (eg.activationTriggers?.anyMsg?.length || 0) +
     (eg.activationTriggers?.userMsg?.length || 0) +
     (eg.activationTriggers?.agentMsg?.length || 0);
+  
   return disclosureCount === 0 && activationCount === 0;
 }
 
 function hasTriggers(eg: EngramInfo): boolean {
-  return !isPermanentlyVisible(eg);
+  return !isPermanentlyVisible(eg) && !isManualOnly(eg);
 }
 
 function filterByTriggerStatus(engrams: EngramInfo[], wantTriggers: boolean): EngramInfo[] {
@@ -489,8 +524,7 @@ export const list = command({
     raw(
       colors.dim("─".repeat(90) + "\n") +
       colors.dim("● ready  ◐ lazy  ○ not initialized") + "\n" +
-      colors.dim("    P = permanently visible") + "\n" +
-      colors.dim("XD/XA = no. of disclosure/activation triggers")
+      colors.dim("P = permanently visible  M = manual only  XD/XA = disclosure/activation triggers")
     );
   },
 });
