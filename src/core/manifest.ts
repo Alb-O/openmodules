@@ -75,10 +75,12 @@ function logManifestErrors(
   manifestPath: string,
   error: z.ZodError<EngramManifest>,
 ) {
-  logError(`Invalid manifest in ${manifestPath}:`);
+  logError(`Invalid manifest: ${manifestPath}`);
   for (const issue of error.issues) {
-    logError(` - ${issue.path.join(".")}: ${issue.message}`);
+    const field = issue.path.length > 0 ? issue.path.join(".") : "(root)";
+    logError(`  ${field}: ${issue.message}`);
   }
+  logError(`This engram will be skipped. Fix the manifest to enable it.`);
 }
 
 export function generateToolName(engramPath: string, baseDir?: string): string {
@@ -190,7 +192,10 @@ export async function parseEngram(
       manifestPath,
     };
   } catch (error) {
-    logError(`Error parsing engram ${manifestPath}:`, error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    logError(`Failed to parse engram: ${manifestPath}`);
+    logError(`  ${errMsg}`);
+    logError(`This engram will be skipped. Check the TOML syntax is valid.`);
     return null;
   }
 }
