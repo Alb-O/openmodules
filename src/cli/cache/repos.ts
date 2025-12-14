@@ -3,6 +3,9 @@ import * as path from "node:path";
 import { warn, info } from "../../logging";
 import { getCacheDir, getDirSize } from "./index";
 
+const DEFAULT_TIMEOUT_MS = 60_000; // 60 seconds for network operations
+const MAX_RETRIES = 2;
+
 /**
  * Run a git command and return stdout, or null if it fails.
  */
@@ -47,6 +50,70 @@ function gitExec(
   }
 }
 
+interface GitNetworkResult {
+  success: boolean;
+  stderr?: string;
+  timedOut?: boolean;
+}
+
+/**
+ * Run a git network command with timeout and retry support.
+ * Returns result object instead of throwing to allow graceful handling.
+ */
+async function gitNetwork(
+  args: string[],
+  options: {
+    cwd?: string;
+    quiet?: boolean;
+    timeoutMs?: number;
+    retries?: number;
+  } = {},
+): Promise<GitNetworkResult> {
+  const {
+    cwd,
+    quiet = false,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    retries = MAX_RETRIES,
+  } = options;
+
+  let lastError: string | undefined;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) {
+      info(`  Retry ${attempt}/${retries}...`);
+    }
+
+    const proc = Bun.spawn(["git", ...args], {
+      cwd,
+      stdout: quiet ? "pipe" : "inherit",
+      stderr: "pipe",
+    });
+
+    const timeoutPromise = new Promise<"timeout">((resolve) =>
+      setTimeout(() => resolve("timeout"), timeoutMs),
+    );
+
+    const exitPromise = proc.exited.then(() => "done" as const);
+    const result = await Promise.race([exitPromise, timeoutPromise]);
+
+    if (result === "timeout") {
+      proc.kill();
+      lastError = `Operation timed out after ${timeoutMs / 1000}s`;
+      continue;
+    }
+
+    const exitCode = await proc.exited;
+    if (exitCode === 0) {
+      return { success: true };
+    }
+
+    lastError = await new Response(proc.stderr).text();
+    lastError = lastError.trim() || "Unknown error";
+  }
+
+  return { success: false, stderr: lastError, timedOut: lastError?.includes("timed out") };
+}
+
 /**
  * Convert a git URL to a cache path.
  * Uses a normalized URL structure: domain/owner/repo.git
@@ -79,25 +146,28 @@ export function isCached(url: string): boolean {
 /**
  * Ensure a repo is in the cache, fetching if needed.
  * Returns the path to the cached bare repo.
- * Throws if fetch/clone fails with actionable error message.
+ * Throws if clone fails; fetch failures use stale cache with warning.
  */
-export function ensureCached(
+export async function ensureCached(
   url: string,
   options?: { quiet?: boolean },
-): string {
+): Promise<string> {
   const cachePath = urlToCachePath(url);
   const quiet = options?.quiet ?? false;
 
   if (fs.existsSync(cachePath)) {
-    const result = Bun.spawnSync(["git", "fetch", "--all", "--prune"], {
+    const result = await gitNetwork(["fetch", "--all", "--prune"], {
       cwd: cachePath,
-      stdout: quiet ? "pipe" : "inherit",
-      stderr: quiet ? "pipe" : "inherit",
+      quiet,
     });
     if (!result.success) {
-      const errorMsg = result.stderr?.toString().trim() || "Unknown error";
       warn(`Failed to update cache for ${url}`);
-      info(`  ${errorMsg}`);
+      if (result.stderr) {
+        info(`  ${result.stderr}`);
+      }
+      if (result.timedOut) {
+        info("  Network operation timed out");
+      }
       info("  Using potentially stale cached version");
     }
   } else {
@@ -105,12 +175,17 @@ export function ensureCached(
     if (!fs.existsSync(parentDir)) {
       fs.mkdirSync(parentDir, { recursive: true });
     }
-    const result = Bun.spawnSync(["git", "clone", "--bare", url, cachePath], {
-      stdout: quiet ? "pipe" : "inherit",
-      stderr: quiet ? "pipe" : "inherit",
+    const result = await gitNetwork(["clone", "--bare", url, cachePath], {
+      quiet,
     });
     if (!result.success) {
-      const errorMsg = result.stderr?.toString().trim() || "Unknown error";
+      const errorMsg = result.stderr || "Unknown error";
+      if (result.timedOut) {
+        throw new Error(
+          `Failed to clone ${url} into cache: operation timed out\n` +
+            `  Check your network connection and try again`,
+        );
+      }
       throw new Error(`Failed to clone ${url} into cache:\n  ${errorMsg}`);
     }
   }
@@ -121,12 +196,12 @@ export function ensureCached(
 /**
  * Clone from cache using --reference for object sharing.
  */
-export function cloneFromCache(
+export async function cloneFromCache(
   url: string,
   targetDir: string,
   options?: { quiet?: boolean },
-): void {
-  const cachePath = ensureCached(url, options);
+): Promise<void> {
+  const cachePath = await ensureCached(url, options);
   gitExec(["clone", "--reference", cachePath, url, targetDir], {
     quiet: options?.quiet,
   });
@@ -135,13 +210,13 @@ export function cloneFromCache(
 /**
  * Add submodule using cache as reference.
  */
-export function submoduleAddFromCache(
+export async function submoduleAddFromCache(
   url: string,
   relativePath: string,
   projectRoot: string,
   options?: { quiet?: boolean; force?: boolean },
-): void {
-  const cachePath = ensureCached(url, options);
+): Promise<void> {
+  const cachePath = await ensureCached(url, options);
   const args = ["submodule", "add"];
   if (options?.force) args.push("--force");
   args.push("--reference", cachePath, url, relativePath);
@@ -229,11 +304,11 @@ export interface SparseCloneOptions {
  * 2. Using --reference to share any objects that are fetched
  * 3. Speeding up subsequent clones of the same repo
  */
-export function cloneWithSparseCheckout(
+export async function cloneWithSparseCheckout(
   url: string,
   targetDir: string,
   options: SparseCloneOptions = {},
-): void {
+): Promise<void> {
   const { ref, sparse, noCache = false, quiet = false } = options;
 
   const needsDelayedCheckout = (sparse && sparse.length > 0) || ref;
@@ -252,7 +327,7 @@ export function cloneWithSparseCheckout(
       cloneArgs.push("--depth", "1");
     }
   } else {
-    const cachePath = ensureCached(url, { quiet });
+    const cachePath = await ensureCached(url, { quiet });
     cloneArgs.push("--reference", cachePath);
   }
 

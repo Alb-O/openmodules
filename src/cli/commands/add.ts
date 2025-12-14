@@ -134,9 +134,9 @@ async function handleAdd({ parsed, engramName, projectRoot, targetDir, isGlobal,
 
   try {
     if (!clone && !isGlobal) {
-      addAsSubmodule(parsed, projectRoot!, targetDir, force, noCache, engramName);
+      await addAsSubmodule(parsed, projectRoot!, targetDir, force, noCache, engramName);
     } else {
-      cloneDirect(parsed.url, targetDir, noCache);
+      await cloneDirect(parsed.url, targetDir, noCache);
     }
   } catch (error) {
     const err = error as Error;
@@ -167,7 +167,7 @@ function resolveGitDir(projectRoot: string, dotGitPath: string): string {
   return dotGitPath;
 }
 
-function addAsSubmodule(
+async function addAsSubmodule(
   parsed: NonNullable<ReturnType<typeof parseRepoUrl>>,
   projectRoot: string,
   targetDir: string,
@@ -188,13 +188,13 @@ function addAsSubmodule(
       );
     }
   } else {
-    submoduleAddFromCache(parsed.url, relativePath, projectRoot, { force });
+    await submoduleAddFromCache(parsed.url, relativePath, projectRoot, { force });
   }
   success(`Added as submodule: ${targetDir}`);
   updateIndexAfterAdd(projectRoot, engramName, parsed.url);
 }
 
-function cloneDirect(url: string, targetDir: string, noCache: boolean) {
+async function cloneDirect(url: string, targetDir: string, noCache: boolean) {
   if (noCache) {
     const result = Bun.spawnSync(["git", "clone", url, targetDir], { stdout: "inherit", stderr: "pipe" });
     if (!result.success) {
@@ -202,7 +202,7 @@ function cloneDirect(url: string, targetDir: string, noCache: boolean) {
       throw new Error(`git clone failed for ${url}${stderr ? `:\n  ${stderr}` : ""}`);
     }
   } else {
-    cloneFromCache(url, targetDir);
+    await cloneFromCache(url, targetDir);
   }
   success(`Cloned to: ${targetDir}`);
 }

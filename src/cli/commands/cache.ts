@@ -107,7 +107,7 @@ const update = command({
     for (const repo of cached) {
       try {
         info(`  Fetching ${repo.url}...`);
-        ensureCached(repo.url, { quiet: true });
+        await ensureCached(repo.url, { quiet: true });
       } catch (error) {
         warn(`  Failed to update ${repo.url}`);
       }
