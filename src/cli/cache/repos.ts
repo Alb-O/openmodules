@@ -261,21 +261,10 @@ export function cloneWithSparseCheckout(
 
   if (sparse && sparse.length > 0) {
     gitExec(["sparse-checkout", "init"], { cwd: targetDir, quiet: true });
-
-    const sparseSetArgs = [
-      "-c",
-      `git sparse-checkout set --no-cone ${sparse.map((p) => `'${p}'`).join(" ")}`,
-    ];
-    const result = Bun.spawnSync(["sh", ...sparseSetArgs], {
+    gitExec(["sparse-checkout", "set", "--no-cone", ...sparse], {
       cwd: targetDir,
-      stdout: "pipe",
-      stderr: "pipe",
+      quiet: true,
     });
-    if (!result.success) {
-      throw new Error(
-        `Failed to set sparse-checkout patterns:\n  ${result.stderr.toString().trim()}`,
-      );
-    }
   }
 
   if (needsDelayedCheckout) {
