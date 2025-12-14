@@ -1,13 +1,16 @@
 name: Debounced Agent Dispatch
 
+# DISABLED: Bot comments don't trigger OpenCode bot (only user comments do)
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - "src/**"
+#       - "lint/**"
+#       - "AGENTS.md"
+#   workflow_dispatch: # Manual trigger for testing
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/**"
-      - "lint/**"
-      - "AGENTS.md"
-  workflow_dispatch: # Manual trigger for testing
+  workflow_dispatch: # Manual trigger only for now
 
 concurrency:
   group: debounced-agent-dispatch

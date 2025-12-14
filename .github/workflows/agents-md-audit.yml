@@ -1,10 +1,13 @@
 name: AGENTS.md Audit
 
+# DISABLED: Bot comments don't trigger OpenCode bot (I think only user comments do?)
+# on:
+#   issue_comment:
+#     types: [created]
+#   pull_request_review_comment:
+#     types: [created]
 on:
-  issue_comment:
-    types: [created]
-  pull_request_review_comment:
-    types: [created]
+  workflow_dispatch: # Manual trigger only for now
 
 jobs:
   audit:
