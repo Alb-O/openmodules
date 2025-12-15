@@ -125,9 +125,9 @@ Directories use a `.oneliner` or `.oneliner.txt` file containing raw description
 The resulting file list appears in the agent context as:
 
 ```
-/home/user/.config/engrams/my-engram/scripts/  # Shell scripts for automation
-/home/user/.config/engrams/my-engram/scripts/backup.sh  # Database backup utilities
-/home/user/.config/engrams/my-engram/data/config.json
+~/.config/engrams/my-engram/scripts/  # Shell scripts for automation
+~/.config/engrams/my-engram/scripts/backup.sh  # Database backup utilities
+~/.config/engrams/my-engram/data/config.json
 ```
 
 ## Filtering Files
